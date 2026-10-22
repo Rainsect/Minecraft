@@ -1,12 +1,8 @@
-[README-GitHub.md](https://github.com/user-attachments/files/33819059/README-GitHub.md)
-
 # AutoMC
 
 **Minecraft 1.12.2 · Forge 客户端模组 · 把「一串操作」做成可复用的自动化项目**
 
 按一下按键，自动发指令、自动走路、自动交易、自动交任务——不用记命令，不用写脚本，像搭积木一样把动作排成一条流程。
-
-![界面预览](images/preview-list.png)
 
 ---
 
@@ -134,18 +130,6 @@ y<0              时间>=13000
 | `/amc npc` / `/amc slot` | 附近 NPC / 鼠标悬停槽位号 |
 
 > 「完成」按钮才会把编辑结果写回配置；直接 ESC 等于没改。
-
----
-
-## 界面截图
-
-| 项目列表 | 动作编辑 |
-|---|---|
-| ![](images/preview-list.png) | ![](images/preview-editor.png) |
-
-| 设置 | 添加动作 |
-|---|---|
-| ![](images/preview-settings.png) | ![](images/preview-picker.png) |
 
 ---
 
