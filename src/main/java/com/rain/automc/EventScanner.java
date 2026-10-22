@@ -33,9 +33,9 @@ public class EventScanner {
     private long[] timerAcc = new long[0];
 
     public void tick() {
-        Minecraft mc = Minecraft.func_71410_x();
-        EntityPlayerSP player = mc.field_71439_g;
-        if (player == null || mc.field_71441_e == null) {
+        Minecraft mc = Minecraft.getMinecraft();
+        EntityPlayerSP player = mc.player;
+        if (player == null || mc.world == null) {
             this.prevPlayer = null;
             this.deathFired = false;
             this.lastDim = Integer.MIN_VALUE;
@@ -58,7 +58,7 @@ public class EventScanner {
         if (player != this.prevPlayer) {
             boolean joined = this.prevPlayer == null;
             this.prevPlayer = player;
-            this.lastHealth = player.func_110143_aJ();
+            this.lastHealth = player.getHealth();
             if (joined) {
                 this.deathFired = false;
                 this.hurtArmed = true;
@@ -66,7 +66,7 @@ public class EventScanner {
             }
         }
 
-        float hp = player.func_110143_aJ();
+        float hp = player.getHealth();
         if (hp <= 0.0f) {
             if (!this.deathFired) {
                 this.deathFired = true;
@@ -85,7 +85,7 @@ public class EventScanner {
         }
         this.lastHealth = hp;
 
-        int dim = player.field_71093_bK;
+        int dim = player.dimension;
         if (this.lastDim == Integer.MIN_VALUE) {
             this.lastDim = dim;
         } else if (dim != this.lastDim) {
@@ -147,10 +147,10 @@ public class EventScanner {
             return false;
         }
         if (t.equals("\u8840\u91cf\u4f4e\u4e8e")) {
-            return p.func_110143_aJ() > 0.0f && p.func_110143_aJ() <= (float)a.intParam(0, 10);
+            return p.getHealth() > 0.0f && p.getHealth() <= (float)a.intParam(0, 10);
         }
         if (t.equals("\u9965\u997f\u4f4e\u4e8e")) {
-            return p.func_71024_bL().func_75116_a() <= a.intParam(0, 6);
+            return p.getFoodStats().getFoodLevel() <= a.intParam(0, 6);
         }
         if (t.equals("\u80cc\u5305\u7269\u54c1")) {
             return NpcTrader.countItem(p, a.param(0)) >= Math.max(1, a.intParam(1, 64));
@@ -159,47 +159,47 @@ public class EventScanner {
             return NpcTrader.inventoryFull(p);
         }
         if (t.equals("\u7ecf\u9a8c\u7b49\u7ea7")) {
-            return p.field_71068_ca >= a.intParam(0, 30);
+            return p.experienceLevel >= a.intParam(0, 30);
         }
         if (t.equals("\u9644\u8fd1\u6389\u843d\u7269")) {
             int r = Math.max(1, a.intParam(0, 8));
-            AxisAlignedBB box = new AxisAlignedBB(p.field_70165_t - (double)r, p.field_70163_u - (double)r,
-                    p.field_70161_v - (double)r, p.field_70165_t + (double)r, p.field_70163_u + (double)r,
-                    p.field_70161_v + (double)r);
-            return !mc.field_71441_e.func_72872_a(EntityItem.class, box).isEmpty();
+            AxisAlignedBB box = new AxisAlignedBB(p.posX - (double)r, p.posY - (double)r,
+                    p.posZ - (double)r, p.posX + (double)r, p.posY + (double)r,
+                    p.posZ + (double)r);
+            return !mc.world.getEntitiesWithinAABB(EntityItem.class, box).isEmpty();
         }
         if (t.equals("\u9644\u8fd1\u73a9\u5bb6")) {
             int r = Math.max(1, a.intParam(0, 16));
-            List<EntityPlayer> ps = mc.field_71441_e.field_73010_i;
+            List<EntityPlayer> ps = mc.world.playerEntities;
             for (int i = 0; i < ps.size(); ++i) {
                 EntityPlayer e = ps.get(i);
-                if (e != p && e.func_70089_S() && p.func_70068_e((Entity)e) <= (double)(r * r)) {
+                if (e != p && e.isEntityAlive() && p.getDistanceSq((Entity)e) <= (double)(r * r)) {
                     return true;
                 }
             }
             return false;
         }
         if (t.equals("\u5230\u8fbe\u5750\u6807")) {
-            double dx = a.doubleParam(0, 0.0) - p.field_70165_t;
-            double dz = a.doubleParam(2, 0.0) - p.field_70161_v;
+            double dx = a.doubleParam(0, 0.0) - p.posX;
+            double dz = a.doubleParam(2, 0.0) - p.posZ;
             double r = Math.max(0.5, a.doubleParam(3, 3.0));
             return dx * dx + dz * dz <= r * r;
         }
         if (t.equals("Y\u4f4e\u4e8e")) {
-            return p.field_70163_u < a.doubleParam(0, 0.0);
+            return p.posY < a.doubleParam(0, 0.0);
         }
         if (t.equals("\u6e38\u620f\u65f6\u95f4")) {
-            long time = mc.field_71441_e.func_72820_D() % 24000L;
+            long time = mc.world.getWorldTime() % 24000L;
             int target = a.intParam(0, 13000);
             int tol = Math.max(10, a.intParam(1, 200));
             return Math.abs(time - (long)target) <= (long)tol || Math.abs(time - (long)target + 24000L) <= (long)tol;
         }
         if (t.equals("\u8010\u4e45\u504f\u4f4e")) {
-            ItemStack st = p.func_184614_ca();
-            if (st == null || st.func_190926_b() || st.func_77958_k() <= 0) {
+            ItemStack st = p.getHeldItemMainhand();
+            if (st == null || st.isEmpty() || st.getMaxDamage() <= 0) {
                 return false;
             }
-            double pct = 100.0 * (double)(st.func_77958_k() - st.func_77952_i()) / (double)st.func_77958_k();
+            double pct = 100.0 * (double)(st.getMaxDamage() - st.getItemDamage()) / (double)st.getMaxDamage();
             return pct <= (double)a.intParam(0, 20);
         }
         if (t.equals("\u804a\u5929\u542b\u5173\u952e\u8bcd")) {
@@ -210,11 +210,11 @@ public class EventScanner {
     }
 
     private String heldName(EntityPlayerSP p) {
-        ItemStack st = p.func_184614_ca();
-        if (st == null || st.func_190926_b()) {
+        ItemStack st = p.getHeldItemMainhand();
+        if (st == null || st.isEmpty()) {
             return "\u7a7a";
         }
-        return st.func_82833_r();
+        return st.getDisplayName();
     }
 
     @SubscribeEvent
@@ -223,7 +223,7 @@ public class EventScanner {
         if (msg == null) {
             return;
         }
-        this.lastChat = msg.func_150260_c();
+        this.lastChat = msg.getUnformattedText();
         this.lastChatAt = System.currentTimeMillis();
         this.fire("\u804a\u5929\u542b\u5173\u952e\u8bcd", this.lastChatAt, this.lastChat);
     }
@@ -234,8 +234,8 @@ public class EventScanner {
         if (this.nextFire.length != list.size()) {
             return;
         }
-        Minecraft mc = Minecraft.func_71410_x();
-        EntityPlayerSP p = mc.field_71439_g;
+        Minecraft mc = Minecraft.getMinecraft();
+        EntityPlayerSP p = mc.player;
         if (p == null) {
             return;
         }
@@ -254,7 +254,7 @@ public class EventScanner {
                     if (kw.isEmpty() || chatText == null || !chatText.contains(kw)) {
                         continue;
                     }
-                } else if (eventType.equals("\u8fdb\u670d") && !p.field_70170_p.func_175667_e(p.func_180425_c())) {
+                } else if (eventType.equals("\u8fdb\u670d") && !p.world.isBlockLoaded(p.getPosition())) {
                     continue;
                 }
                 if (now < this.nextFire[i]) {

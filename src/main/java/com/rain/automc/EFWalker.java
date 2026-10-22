@@ -98,7 +98,7 @@ public class EFWalker {
         if (EFWalker.targetDistXZ(player, pos) <= 0.3) {
             return "\u00a7a\u5df2\u7adf\u5728\u76ee\u6807\u65b9\u5757\u4e0a";
         }
-        double d = (double)(pos.func_177956_o() + 1) - player.field_70163_u;
+        double d = (double)(pos.getY() + 1) - player.posY;
         if (d > 1.3) {
             return "\u00a7c\u76ee\u6807\u65b9\u5757\u9876\u90e8\u6bd4\u5f53\u524d\u4f4d\u7f6e\u9ad8 " + String.format("%.1f", d) + " \u683c\uff0c\u8df3\u4e0a\u4e0d\u53bb\uff0c\u8bf7\u9760\u8fd1\u4e00\u70b9\u518d\u8bd5";
         }
@@ -112,12 +112,12 @@ public class EFWalker {
         INSTANCE.stuckTicks = 0;
         INSTANCE.climbTicks = 0;
         INSTANCE.lastJumpTick = -100;
-        return "\u00a7a\u5f00\u59cb\u8ddf\u5411 " + blockName + " (" + pos.func_177958_n() + ", " + pos.func_177956_o() + ", " + pos.func_177952_p() + ")";
+        return "\u00a7a\u5f00\u59cb\u8ddf\u5411 " + blockName + " (" + pos.getX() + ", " + pos.getY() + ", " + pos.getZ() + ")";
     }
 
     public static String startCoordWalk(EntityPlayerSP player, double x, double y, double z, double tol) {
-        double dx = x - player.field_70165_t;
-        double dz = z - player.field_70161_v;
+        double dx = x - player.posX;
+        double dz = z - player.posZ;
         if (Math.sqrt(dx * dx + dz * dz) <= Math.max(0.3, tol)) {
             return "\u00a7a\u5df2\u5728\u76ee\u6807\u5750\u6807\u9644\u8fd1";
         }
@@ -145,7 +145,7 @@ public class EFWalker {
         if (n.isEmpty()) {
             return null;
         }
-        return Block.func_149684_b(n);
+        return Block.getBlockFromName(n);
     }
 
     public static void stopWalk() {
@@ -157,7 +157,7 @@ public class EFWalker {
         EFWalker.INSTANCE.stuckTicks = 0;
         EFWalker.INSTANCE.climbTicks = 0;
         EFWalker.INSTANCE.cycleTicks = 0;
-        EntityPlayerSP player = Minecraft.func_71410_x().field_71439_g;
+        EntityPlayerSP player = Minecraft.getMinecraft().player;
         if (player != null) {
             EFWalker.stopMoving(player);
         }
@@ -168,23 +168,23 @@ public class EFWalker {
         if (event.phase != TickEvent.Phase.END) {
             return;
         }
-        Minecraft mc = Minecraft.func_71410_x();
-        EntityPlayerSP player = mc.field_71439_g;
-        if (player == null || mc.field_71441_e == null) {
+        Minecraft mc = Minecraft.getMinecraft();
+        EntityPlayerSP player = mc.player;
+        if (player == null || mc.world == null) {
             this.hardReset();
             return;
         }
         if (!this.running) {
-            double d = player.field_70165_t - this.homeX;
-            double d2 = player.field_70161_v - this.homeZ;
+            double d = player.posX - this.homeX;
+            double d2 = player.posZ - this.homeZ;
             if (d * d + d2 * d2 > 2.25) {
-                this.homeX = player.field_70165_t;
-                this.homeY = player.field_70163_u;
-                this.homeZ = player.field_70161_v;
+                this.homeX = player.posX;
+                this.homeY = player.posY;
+                this.homeZ = player.posZ;
             }
             return;
         }
-        if (player.func_110143_aJ() <= 0.0f) {
+        if (player.getHealth() <= 0.0f) {
             EFWalker.stopWalk();
             return;
         }
@@ -203,11 +203,11 @@ public class EFWalker {
             }
             return;
         }
-        MovementInput movementInput = player.field_71158_b;
+        MovementInput movementInput = player.movementInput;
         if (movementInput != null) {
-            movementInput.field_192832_b = 0.0f;
-            movementInput.field_78902_a = 0.0f;
-            movementInput.field_78901_c = false;
+            movementInput.moveForward = 0.0f;
+            movementInput.moveStrafe = 0.0f;
+            movementInput.jump = false;
         }
         if (this.state == STATE_ITEM) {
             this.tickItem(player);
@@ -235,12 +235,12 @@ public class EFWalker {
     }
 
     private boolean startItemCycle(EntityPlayerSP player, int rx, int ry, int rz) {
-        AxisAlignedBB aabb = new AxisAlignedBB(player.field_70165_t - (double)rx, player.field_70163_u - (double)ry, player.field_70161_v - (double)rz, player.field_70165_t + (double)rx, player.field_70163_u + (double)ry, player.field_70161_v + (double)rz);
-        List list = player.field_70170_p.func_72872_a(EntityItem.class, aabb);
+        AxisAlignedBB aabb = new AxisAlignedBB(player.posX - (double)rx, player.posY - (double)ry, player.posZ - (double)rz, player.posX + (double)rx, player.posY + (double)ry, player.posZ + (double)rz);
+        List list = player.world.getEntitiesWithinAABB(EntityItem.class, aabb);
         ArrayList<EntityItem> items = new ArrayList<EntityItem>();
         for (int i = 0; i < list.size(); ++i) {
             EntityItem entityItem = (EntityItem)list.get(i);
-            if (entityItem == null || !entityItem.func_70089_S() || entityItem.func_174874_s()) continue;
+            if (entityItem == null || !entityItem.isEntityAlive() || entityItem.cannotPickup()) continue;
             items.add(entityItem);
         }
         if (items.isEmpty()) {
@@ -264,16 +264,16 @@ public class EFWalker {
             return;
         }
         EntityItem item = this.targets.get(this.idx);
-        if (item == null || !item.func_70089_S()) {
+        if (item == null || !item.isEntityAlive()) {
             ++this.idx;
             this.lastDist = -1.0;
             this.stuckTicks = 0;
             this.climbTicks = 0;
             return;
         }
-        double d = this.walkTowards(player, item.field_70165_t, item.field_70163_u, item.field_70161_v, REACH_ITEM, 1.2, 2.0);
+        double d = this.walkTowards(player, item.posX, item.posY, item.posZ, REACH_ITEM, 1.2, 2.0);
         boolean bl = this.lastDist >= 0.0 && this.lastDist - d >= 0.002;
-        boolean onGround = player.field_70123_F;
+        boolean onGround = player.collidedHorizontally;
         if (onGround) {
             ++this.climbTicks;
             if (this.climbTicks > CLIMB_LIMIT) {
@@ -299,7 +299,7 @@ public class EFWalker {
             this.climbTicks = 0;
             return;
         }
-        if (d <= REACH_ITEM && Math.abs(item.field_70163_u - player.field_70163_u) < 1.8) {
+        if (d <= REACH_ITEM && Math.abs(item.posY - player.posY) < 1.8) {
             EFWalker.stopMoving(player);
             this.waitTimer = PICK_WAIT;
             this.state = STATE_WAIT;
@@ -320,7 +320,7 @@ public class EFWalker {
     private void tickHome(EntityPlayerSP player) {
         double d = this.walkTowards(player, this.homeX, this.homeY, this.homeZ, REACH_HOME, 1.2, 2.0);
         boolean bl = this.lastDist >= 0.0 && this.lastDist - d >= 0.002;
-        boolean onGround = player.field_70123_F;
+        boolean onGround = player.collidedHorizontally;
         if (onGround) {
             ++this.climbTicks;
             if (this.climbTicks > CLIMB_LIMIT) {
@@ -351,17 +351,17 @@ public class EFWalker {
             EFWalker.stopWalk();
             return;
         }
-        if (player.field_70170_p.func_180495_p(this.targetPos).func_177230_c() != this.targetBlock) {
+        if (player.world.getBlockState(this.targetPos).getBlock() != this.targetBlock) {
             EFWalker.tell(player, "\u00a7c\u76ee\u6807\u65b9\u5757\u4e0d\u89c1\u4e86\uff0c\u5df2\u505c\u6b62");
             EFWalker.stopWalk();
             return;
         }
-        double tx = (double)this.targetPos.func_177958_n() + 0.5;
-        double ty = (double)this.targetPos.func_177956_o() + 1.0;
-        double tz = (double)this.targetPos.func_177952_p() + 0.5;
+        double tx = (double)this.targetPos.getX() + 0.5;
+        double ty = (double)this.targetPos.getY() + 1.0;
+        double tz = (double)this.targetPos.getZ() + 0.5;
         double d = this.walkTowards(player, tx, ty, tz, REACH_TARGET, 1.2, 2.0);
         boolean bl = this.lastDist >= 0.0 && this.lastDist - d >= 0.002;
-        boolean onGround = player.field_70123_F;
+        boolean onGround = player.collidedHorizontally;
         if (onGround) {
             ++this.climbTicks;
             if (this.climbTicks > TARGET_CLIMB_LIMIT) {
@@ -379,7 +379,7 @@ public class EFWalker {
         }
         this.lastDist = d;
         if (this.stuckTicks > TARGET_STUCK_LIMIT) {
-            double dy = ty - player.field_70163_u;
+            double dy = ty - player.posY;
             if (dy > 1.3) {
                 EFWalker.tell(player, "\u00a7c\u8d70\u4e0d\u8fc7\u53bb\uff1a\u76ee\u6807\u65b9\u5757\u9876\u90e8\u6bd4\u5f53\u524d\u4f4d\u7f6e\u9ad8 " + String.format("%.1f", dy) + " \u683c");
             } else {
@@ -398,7 +398,7 @@ public class EFWalker {
     private void tickCoord(EntityPlayerSP player) {
         double d = this.walkTowards(player, this.coordX, this.coordY, this.coordZ, this.coordTol, 1.2, 2.0);
         boolean bl = this.lastDist >= 0.0 && this.lastDist - d >= 0.002;
-        boolean onGround = player.field_70123_F;
+        boolean onGround = player.collidedHorizontally;
         if (onGround) {
             ++this.climbTicks;
             if (this.climbTicks > TARGET_CLIMB_LIMIT) {
@@ -427,10 +427,10 @@ public class EFWalker {
         }
     }
 
-    private static BlockPos scanTargets(EntityPlayerSP player, Block block, int rx, int ry, int rz) {        World world = player.field_70170_p;
-        int px = (int)Math.floor(player.field_70165_t);
-        int py = (int)Math.floor(player.field_70163_u);
-        int pz = (int)Math.floor(player.field_70161_v);
+    private static BlockPos scanTargets(EntityPlayerSP player, Block block, int rx, int ry, int rz) {        World world = player.world;
+        int px = (int)Math.floor(player.posX);
+        int py = (int)Math.floor(player.posY);
+        int pz = (int)Math.floor(player.posZ);
         BlockPos best = null;
         double bestDist = Double.MAX_VALUE;
         int y0 = Math.max(0, py - ry);
@@ -439,8 +439,8 @@ public class EFWalker {
             for (int z = pz - rz; z <= pz + rz; ++z) {
                 for (int y = y0; y <= y1; ++y) {
                     BlockPos pos = new BlockPos(x, y, z);
-                    if (!world.func_175667_e(pos)) continue;
-                    if (world.func_180495_p(pos).func_177230_c() != block) continue;
+                    if (!world.isBlockLoaded(pos)) continue;
+                    if (world.getBlockState(pos).getBlock() != block) continue;
                     double dx = (double)(x - px);
                     double dz = (double)(z - pz);
                     double d2 = dx * dx + dz * dz;
@@ -454,49 +454,49 @@ public class EFWalker {
     }
 
     private static double targetDistXZ(EntityPlayerSP player, BlockPos pos) {
-        double dx = (double)pos.func_177958_n() + 0.5 - player.field_70165_t;
-        double dz = (double)pos.func_177952_p() + 0.5 - player.field_70161_v;
+        double dx = (double)pos.getX() + 0.5 - player.posX;
+        double dz = (double)pos.getZ() + 0.5 - player.posZ;
         return Math.sqrt(dx * dx + dz * dz);
     }
 
     private double walkTowards(EntityPlayerSP player, double tx, double ty, double tz, double reach, double maxUp, double maxHoriz) {
-        double dx = tx - player.field_70165_t;
-        double dz = tz - player.field_70161_v;
-        double dy = ty - player.field_70163_u;
+        double dx = tx - player.posX;
+        double dz = tz - player.posZ;
+        double dy = ty - player.posY;
         double horiz = Math.sqrt(dx * dx + dz * dz);
         if (horiz <= reach) {
             EFWalker.stopMoving(player);
             return horiz;
         }
         double inv = 1.0 / horiz;
-        double speed = player.field_71075_bZ.func_75094_b();
-        player.field_70159_w = dx * inv * speed;
-        player.field_70179_y = dz * inv * speed;
-        boolean inLiquid = player.func_70090_H() || player.func_180799_ab();
+        double speed = player.capabilities.getWalkSpeed();
+        player.motionX = dx * inv * speed;
+        player.motionZ = dz * inv * speed;
+        boolean inLiquid = player.isInWater() || player.isInLava();
         if (inLiquid) {
-            if ((dy > 0.5 || player.field_70123_F) && this.cycleTicks - this.lastJumpTick >= 5) {
-                player.field_70181_x = 0.42;
+            if ((dy > 0.5 || player.collidedHorizontally) && this.cycleTicks - this.lastJumpTick >= 5) {
+                player.motionY = 0.42;
                 this.lastJumpTick = this.cycleTicks;
             }
             return horiz;
         }
-        boolean onGround = player.field_70123_F;
+        boolean onGround = player.collidedHorizontally;
         boolean needUp = dy > maxUp && horiz < maxHoriz;
-        if (player.field_70122_E && (onGround || needUp) && this.cycleTicks - this.lastJumpTick >= 6) {
-            player.field_70181_x = 0.42;
+        if (player.onGround && (onGround || needUp) && this.cycleTicks - this.lastJumpTick >= 6) {
+            player.motionY = 0.42;
             this.lastJumpTick = this.cycleTicks;
         }
         return horiz;
     }
 
     private static void stopMoving(EntityPlayerSP player) {
-        player.field_70159_w = 0.0;
-        player.field_70179_y = 0.0;
-        player.field_70181_x = 0.0;
+        player.motionX = 0.0;
+        player.motionZ = 0.0;
+        player.motionY = 0.0;
     }
 
     private static void tell(EntityPlayerSP player, String msg) {
-        player.func_146105_b((ITextComponent)new TextComponentString(msg), true);
+        player.sendStatusMessage((ITextComponent)new TextComponentString(msg), true);
     }
 
     private void hardReset() {

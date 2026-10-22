@@ -27,11 +27,11 @@ public class PlayerActions {
     private static final List<long[]> keyReleases = new ArrayList<long[]>();
 
     public static void setForward(float v) {
-        EntityPlayerSP p = Minecraft.func_71410_x().field_71439_g;
-        if (p == null || p.field_71158_b == null) {
+        EntityPlayerSP p = Minecraft.getMinecraft().player;
+        if (p == null || p.movementInput == null) {
             return;
         }
-        p.field_71158_b.field_192832_b = v;
+        p.movementInput.moveForward = v;
     }
 
     public static void holdForward(int ms) {
@@ -41,59 +41,59 @@ public class PlayerActions {
     }
 
     public static void stopMove() {
-        EntityPlayerSP p = Minecraft.func_71410_x().field_71439_g;
+        EntityPlayerSP p = Minecraft.getMinecraft().player;
         forwardOn = false;
         forwardUntil = 0L;
         if (p == null) {
             return;
         }
-        MovementInput mi = p.field_71158_b;
+        MovementInput mi = p.movementInput;
         if (mi != null) {
-            mi.field_192832_b = 0.0f;
-            mi.field_78902_a = 0.0f;
-            mi.field_78901_c = false;
+            mi.moveForward = 0.0f;
+            mi.moveStrafe = 0.0f;
+            mi.jump = false;
         }
-        p.field_70159_w = 0.0;
-        p.field_70179_y = 0.0;
-        p.field_70181_x = 0.0;
+        p.motionX = 0.0;
+        p.motionZ = 0.0;
+        p.motionY = 0.0;
     }
 
     public static void sneak(boolean on) {
-        EntityPlayerSP p = Minecraft.func_71410_x().field_71439_g;
+        EntityPlayerSP p = Minecraft.getMinecraft().player;
         if (p != null) {
-            p.func_70095_a(on);
+            p.setSneaking(on);
         }
     }
 
     public static void sprint(boolean on) {
-        EntityPlayerSP p = Minecraft.func_71410_x().field_71439_g;
+        EntityPlayerSP p = Minecraft.getMinecraft().player;
         if (p != null) {
-            p.func_70031_b(on);
+            p.setSprinting(on);
         }
     }
 
     public static void jump() {
-        EntityPlayerSP p = Minecraft.func_71410_x().field_71439_g;
-        if (p != null && p.field_70122_E) {
-            p.field_70181_x = 0.42;
+        EntityPlayerSP p = Minecraft.getMinecraft().player;
+        if (p != null && p.onGround) {
+            p.motionY = 0.42;
         }
     }
 
     public static void look(float yaw, float pitch) {
-        EntityPlayerSP p = Minecraft.func_71410_x().field_71439_g;
+        EntityPlayerSP p = Minecraft.getMinecraft().player;
         if (p == null) {
             return;
         }
-        p.field_70177_z = yaw;
-        p.field_70126_B = yaw;
-        p.field_70125_A = Math.max(-90.0f, Math.min(90.0f, pitch));
-        p.field_70127_C = p.field_70125_A;
+        p.rotationYaw = yaw;
+        p.prevRotationYaw = yaw;
+        p.rotationPitch = Math.max(-90.0f, Math.min(90.0f, pitch));
+        p.prevRotationPitch = p.rotationPitch;
     }
 
     public static boolean lookAtNearestPlayer() {
-        Minecraft mc = Minecraft.func_71410_x();
-        EntityPlayerSP p = mc.field_71439_g;
-        if (p == null || mc.field_71441_e == null) {
+        Minecraft mc = Minecraft.getMinecraft();
+        EntityPlayerSP p = mc.player;
+        if (p == null || mc.world == null) {
             return false;
         }
         Entity t = nearest(p, 64.0f, "\u73a9\u5bb6");
@@ -105,9 +105,9 @@ public class PlayerActions {
     }
 
     public static void faceTo(EntityPlayerSP p, Entity e) {
-        double dx = e.field_70165_t - p.field_70165_t;
-        double dz = e.field_70161_v - p.field_70161_v;
-        double dy = e.field_70163_u + (double)e.func_70047_e() * 0.8 - (p.field_70163_u + (double)p.func_70047_e());
+        double dx = e.posX - p.posX;
+        double dz = e.posZ - p.posZ;
+        double dy = e.posY + (double)e.getEyeHeight() * 0.8 - (p.posY + (double)p.getEyeHeight());
         double horiz = Math.sqrt(dx * dx + dz * dz);
         float yaw = (float)(Math.atan2(dz, dx) * 180.0 / Math.PI) - 90.0f;
         float pitch = (float)(-(Math.atan2(dy, horiz) * 180.0 / Math.PI));
@@ -115,9 +115,9 @@ public class PlayerActions {
     }
 
     public static boolean attackNearest(int range, String type) {
-        Minecraft mc = Minecraft.func_71410_x();
-        EntityPlayerSP p = mc.field_71439_g;
-        if (p == null || mc.field_71441_e == null) {
+        Minecraft mc = Minecraft.getMinecraft();
+        EntityPlayerSP p = mc.player;
+        if (p == null || mc.world == null) {
             return false;
         }
         Entity t = nearest(p, (float)range, type);
@@ -125,17 +125,17 @@ public class PlayerActions {
             return false;
         }
         faceTo(p, t);
-        mc.field_71442_b.func_78764_a(p, t);
-        p.func_184609_a(net.minecraft.util.EnumHand.MAIN_HAND);
+        mc.playerController.attackEntity(p, t);
+        p.swingArm(net.minecraft.util.EnumHand.MAIN_HAND);
         return true;
     }
 
     public static Entity nearest(EntityPlayerSP p, float range, String type) {
-        Minecraft mc = Minecraft.func_71410_x();
+        Minecraft mc = Minecraft.getMinecraft();
         AxisAlignedBB box = new AxisAlignedBB(
-                p.field_70165_t - (double)range, p.field_70163_u - (double)range, p.field_70161_v - (double)range,
-                p.field_70165_t + (double)range, p.field_70163_u + (double)range, p.field_70161_v + (double)range);
-        List<?> list = mc.field_71441_e.func_72872_a(Entity.class, box);
+                p.posX - (double)range, p.posY - (double)range, p.posZ - (double)range,
+                p.posX + (double)range, p.posY + (double)range, p.posZ + (double)range);
+        List<?> list = mc.world.getEntitiesWithinAABB(Entity.class, box);
         Entity best = null;
         double bestD = Double.MAX_VALUE;
         for (int i = 0; i < list.size(); ++i) {
@@ -144,7 +144,7 @@ public class PlayerActions {
                 continue;
             }
             Entity e = (Entity)o;
-            if (e == p || !e.func_70089_S()) {
+            if (e == p || !e.isEntityAlive()) {
                 continue;
             }
             boolean wantPlayer = "\u73a9\u5bb6".equals(type);
@@ -155,7 +155,7 @@ public class PlayerActions {
             if (wantMob && (!(e instanceof EntityLivingBase) || e instanceof EntityPlayer)) {
                 continue;
             }
-            double d = p.func_70068_e(e);
+            double d = p.getDistanceSq(e);
             if (d < bestD) {
                 bestD = d;
                 best = e;
@@ -165,38 +165,38 @@ public class PlayerActions {
     }
 
     public static void drop(boolean all) {
-        EntityPlayerSP p = Minecraft.func_71410_x().field_71439_g;
+        EntityPlayerSP p = Minecraft.getMinecraft().player;
         if (p != null) {
-            p.func_71040_bB(all);
+            p.dropItem(all);
         }
     }
 
     public static void openInventory() {
-        Minecraft mc = Minecraft.func_71410_x();
-        if (mc.field_71439_g != null) {
-            mc.func_147108_a((GuiScreen)new GuiInventory((EntityPlayer)mc.field_71439_g));
+        Minecraft mc = Minecraft.getMinecraft();
+        if (mc.player != null) {
+            mc.displayGuiScreen((GuiScreen)new GuiInventory((EntityPlayer)mc.player));
         }
     }
 
     public static void closeScreen() {
-        Minecraft.func_71410_x().func_147108_a((GuiScreen)null);
+        Minecraft.getMinecraft().displayGuiScreen((GuiScreen)null);
     }
 
     public static void clipboard(String text) {
-        GuiScreen.func_146275_d(text);
+        GuiScreen.setClipboardString(text);
     }
 
     public static void chatSelf(String text) {
-        EntityPlayerSP p = Minecraft.func_71410_x().field_71439_g;
+        EntityPlayerSP p = Minecraft.getMinecraft().player;
         if (p != null) {
-            p.func_146105_b((net.minecraft.util.text.ITextComponent)new TextComponentString(text), false);
+            p.sendStatusMessage((net.minecraft.util.text.ITextComponent)new TextComponentString(text), false);
         }
     }
 
     /* 按键：按 key.* 描述名匹配原版按键，按住 ms 后自动松开 */
     public static boolean pressKey(String name, int ms) {
-        Minecraft mc = Minecraft.func_71410_x();
-        KeyBinding[] all = mc.field_71474_y.field_74324_K;
+        Minecraft mc = Minecraft.getMinecraft();
+        KeyBinding[] all = mc.gameSettings.keyBindings;
         String want = name == null ? "" : name.trim().toLowerCase();
         if (want.isEmpty()) {
             return false;
@@ -206,13 +206,13 @@ public class PlayerActions {
             if (kb == null) {
                 continue;
             }
-            String desc = kb.func_151464_g();
+            String desc = kb.getKeyDescription();
             if (desc == null) {
                 continue;
             }
             if (desc.toLowerCase().equals(want) || desc.toLowerCase().replace("key.", "").equals(want)) {
-                int code = kb.func_151463_i();
-                KeyBinding.func_74510_a(code, true);
+                int code = kb.getKeyCode();
+                KeyBinding.setKeyBindState(code, true);
                 keyReleases.add(new long[]{code, System.currentTimeMillis() + Math.max(50, ms)});
                 return true;
             }
@@ -233,7 +233,7 @@ public class PlayerActions {
         for (int i = keyReleases.size() - 1; i >= 0; --i) {
             long[] r = keyReleases.get(i);
             if (now >= r[1]) {
-                KeyBinding.func_74510_a((int)r[0], false);
+                KeyBinding.setKeyBindState((int)r[0], false);
                 keyReleases.remove(i);
             }
         }
@@ -245,7 +245,7 @@ public class PlayerActions {
         sprint(false);
         for (int i = keyReleases.size() - 1; i >= 0; --i) {
             long[] r = keyReleases.get(i);
-            KeyBinding.func_74510_a((int)r[0], false);
+            KeyBinding.setKeyBindState((int)r[0], false);
             keyReleases.remove(i);
         }
     }

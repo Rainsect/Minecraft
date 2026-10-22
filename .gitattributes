@@ -1,0 +1,17 @@
+# 统一换行符：仓库内存 LF，Windows 检出时按需转换
+* text=auto
+
+# 构建脚本与脚本文件必须保持 LF，否则 Windows / Unix 下都可能执行失败
+*.gradle    text eol=lf
+*.properties text eol=lf
+*.md        text eol=lf
+gradlew     text eol=lf
+*.bat       text eol=crlf
+
+# Java 源码
+*.java      text eol=lf
+
+# 二进制
+*.jar       binary
+*.png       binary
+*.zip       binary

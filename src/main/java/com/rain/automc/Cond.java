@@ -73,8 +73,8 @@ public class Cond {
         if (t.isEmpty()) {
             return 0.0;
         }
-        Minecraft mc = Minecraft.func_71410_x();
-        EntityPlayerSP p = mc.field_71439_g;
+        Minecraft mc = Minecraft.getMinecraft();
+        EntityPlayerSP p = mc.player;
         if (t.startsWith("\u53d8\u91cf:")) {
             return num(vars.get(t.substring(3).trim()), 0.0);
         }
@@ -89,48 +89,48 @@ public class Cond {
             if (xyz.length < 3) {
                 return 0.0;
             }
-            double dx = num(xyz[0], 0.0) - p.field_70165_t;
-            double dz = num(xyz[2], 0.0) - p.field_70161_v;
+            double dx = num(xyz[0], 0.0) - p.posX;
+            double dz = num(xyz[2], 0.0) - p.posZ;
             return Math.sqrt(dx * dx + dz * dz);
         }
         if (p == null) {
             return 0.0;
         }
         if (t.equals("\u8840\u91cf")) {
-            return p.func_110143_aJ();
+            return p.getHealth();
         }
         if (t.equals("\u6700\u5927\u8840\u91cf")) {
-            return p.func_110138_aP();
+            return p.getMaxHealth();
         }
         if (t.equals("\u9965\u997f")) {
-            return p.func_71024_bL().func_75116_a();
+            return p.getFoodStats().getFoodLevel();
         }
         if (t.equals("\u7ecf\u9a8c")) {
-            return p.field_71068_ca;
+            return p.experienceLevel;
         }
         if (t.equalsIgnoreCase("y")) {
-            return p.field_70163_u;
+            return p.posY;
         }
         if (t.equalsIgnoreCase("x")) {
-            return p.field_70165_t;
+            return p.posX;
         }
         if (t.equalsIgnoreCase("z")) {
-            return p.field_70161_v;
+            return p.posZ;
         }
-        if (t.equals("\u65f6\u95f4") && mc.field_71441_e != null) {
-            return mc.field_71441_e.func_72820_D() % 24000L;
+        if (t.equals("\u65f6\u95f4") && mc.world != null) {
+            return mc.world.getWorldTime() % 24000L;
         }
         if (t.equals("\u624b\u6301\u8010\u4e45")) {
-            ItemStack st = p.func_184614_ca();
-            if (st == null || st.func_190926_b() || st.func_77958_k() <= 0) {
+            ItemStack st = p.getHeldItemMainhand();
+            if (st == null || st.isEmpty() || st.getMaxDamage() <= 0) {
                 return 0.0;
             }
-            return st.func_77958_k() - st.func_77952_i();
+            return st.getMaxDamage() - st.getItemDamage();
         }
         if (t.startsWith("\u4f4d\u7f6e\u5757:")) {
-            BlockPos pos = mc.field_71476_x == null || mc.field_71476_x.func_178782_a() == null
-                    ? BlockPos.field_177992_a : mc.field_71476_x.func_178782_a();
-            return (double)pos.func_177956_o();
+            BlockPos pos = mc.objectMouseOver == null || mc.objectMouseOver.getBlockPos() == null
+                    ? BlockPos.ORIGIN : mc.objectMouseOver.getBlockPos();
+            return (double)pos.getY();
         }
         return num(t, 0.0);
     }

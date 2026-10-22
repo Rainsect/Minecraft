@@ -1,0 +1,39 @@
+# 构建产物
+build/
+out/
+classes/
+*.class
+
+# 运行目录（含日志、配置、截图，不入库）
+run/
+logs/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+bin/
+.eclipse/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 本地配置文件
+config/
+options.txt
+usercache.json
+
+# jar：只保留 gradle wrapper 自带的那个
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# 依赖缓存
+.gradle/
