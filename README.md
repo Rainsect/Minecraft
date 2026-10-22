@@ -56,7 +56,7 @@ AutoMC 是一个**纯客户端**的自动化模组。一个「项目」= 一串�
 ## 安装
 
 1. 安装 Minecraft 1.12.2 与 Forge 14.23.5.2847
-2. 从 [Releases](../../releases) 下载 `automc-<version>.jar`，放进 `.minecraft/mods/`
+2. 从 [Releases](https://github.com/Rainsect/Minecraft/releases) 下载 `automc-<version>.jar`，放进 `.minecraft/mods/`
 3. 启动游戏，进入世界后按 **F8** 打开界面
 
 首次启动会在 `config/automc.json` 生成配置；旧版的 `autocommandzh.json` / `endframe.json` 会自动迁移。
