@@ -78,8 +78,8 @@ public class ChainEngine {
         if (idx < 0 || idx >= list.size()) {
             return false;
         }
-        if (EFWalker.isBusy() || NpcTrader.isBusy()) {
-            lastMessage = "\u00a7c\u8d70\u8def/\u4ea4\u6613\u5b50\u4efb\u52a1\u672a\u7ed3\u675f";
+        if (EFWalker.isBusy()) {
+            lastMessage = "\u00a7c\u8d70\u8def\u5b50\u4efb\u52a1\u672a\u7ed3\u675f";
             return false;
         }
         ScriptChain c = list.get(idx);
@@ -126,7 +126,6 @@ public class ChainEngine {
         pendKind = 0;
         pendLeft = 0;
         EFWalker.stopWalk();
-        NpcTrader.stop();
         PlayerActions.resetAll();
     }
 
@@ -157,7 +156,7 @@ public class ChainEngine {
             return;
         }
         if (awaiting) {
-            if (EFWalker.isBusy() || NpcTrader.isBusy()) {
+            if (EFWalker.isBusy()) {
                 return;
             }
             awaiting = false;
@@ -341,14 +340,9 @@ public class ChainEngine {
                 lastMessage = "\u00a7e\u9644\u8fd1\u6ca1\u6709\u53ef\u653b\u51fb\u76ee\u6807";
             }
             after(a, c);
-        } else if (t.equals("NPC\u4ea4\u6613")) {
-            String r = NpcTrader.start(a.param(0), a.param(1), a.intParam(2, 1));
-            if (r == null) {
-                awaiting = true;
-            } else {
-                lastMessage = r;
-                after(a, c);
-            }
+        } else if (t.equals("\u70b9\u51fb\u5750\u6807")) {
+            lastMessage = clickAt(a);
+            after(a, c);
         } else if (t.equals("\u6361\u6389\u843d\u7269")) {
             String r = EFWalker.startItemWalk(player, a.intParam(0, 8), a.intParam(1, 5), a.intParam(2, 8));
             if (r == null) {
@@ -479,5 +473,19 @@ public class ChainEngine {
             out.add(en.getKey() + "=" + en.getValue());
         }
         return out;
+    }
+
+    /* 在屏幕任意位置按真实鼠标点一下（坐标为窗口像素，左上角为 0,0） */
+    private static String clickAt(ScriptAction a) {
+        Minecraft mc = Minecraft.getMinecraft();
+        if (mc.player == null) {
+            return "§c没有玩家";
+        }
+        int x = a.intParam(0, 0);
+        int y = a.intParam(1, 0);
+        String btn = a.param(2) == null ? "" : a.param(2);
+        int button = btn.contains("右") ? 1 : 0;
+        boolean shift = btn.toLowerCase().contains("shift");
+        return ScreenClicker.click(x, y, button, shift);
     }
 }

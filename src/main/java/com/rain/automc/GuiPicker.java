@@ -42,14 +42,10 @@ public class GuiPicker extends GuiBase {
 
     private void refresh() {
         this.shown.clear();
-        String cat = this.tab == 0 ? null : Catalog.CATS[this.tab - 1];
-        boolean onlyEvent = this.tab == 1;
+        String cat = Catalog.CATS[Math.max(0, Math.min(this.tab, Catalog.CATS.length - 1))];
         for (int i = 0; i < Catalog.ALL.size(); ++i) {
             Catalog.Def d = Catalog.ALL.get(i);
             if (cat != null && !d.cat.equals(cat)) {
-                continue;
-            }
-            if (onlyEvent && !d.event) {
                 continue;
             }
             this.shown.add(d);
@@ -75,7 +71,7 @@ public class GuiPicker extends GuiBase {
         int w = this.panelW();
         int h = this.panelH();
         this.card(x, y, w, h, 0xFF111820, 0x3AFFFFFF);
-        this.text("\u6dfb\u52a0\u79ef\u6728", x + 14, y + 14, TEXT);
+        this.text("\u6dfb\u52a0\u52a8\u4f5c", x + 14, y + 14, TEXT);
         this.textRight("ESC \u53d6\u6d88", x + w - 14, y + 14, DIM);
         this.divider(x + 12, y + 34, w - 24);
 
@@ -85,10 +81,10 @@ public class GuiPicker extends GuiBase {
     }
 
     private void drawTabs(int x, int y, int w) {
-        int count = Catalog.CATS.length + 1;
+        int count = Catalog.CATS.length;
         int tw = (w - 24) / count;
         for (int i = 0; i < count; ++i) {
-            String label = i == 0 ? "\u5168\u90e8" : Catalog.CATS[i - 1];
+            String label = Catalog.CATS[i];
             int tx = x + 12 + i * tw;
             boolean on = this.tab == i;
             boolean hov = this.isHover(900 + i);
@@ -98,10 +94,7 @@ public class GuiPicker extends GuiBase {
             } else if (hov) {
                 this.round(tx, y, tw - 4, 20, 4, 0x1EFFFFFF);
             }
-            int color = on ? TEXT : (hov ? SUB : DIM);
-            if (i > 0 && i <= Catalog.CATS.length) {
-                color = on ? Catalog.CAT_COLORS[i - 1] : (hov ? SUB : DIM);
-            }
+            int color = on ? Catalog.CAT_COLORS[i] : (hov ? SUB : DIM);
             this.textCenter(label, tx + (tw - 4) / 2, y + 6, color);
             this.hot(900 + i, tx, y, tw - 4, 20, null);
         }

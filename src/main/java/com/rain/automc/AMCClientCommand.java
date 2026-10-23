@@ -57,9 +57,6 @@ public class AMCClientCommand extends CommandBase {
             if (EFWalker.isBusy()) {
                 s = s + " | " + EFWalker.status();
             }
-            if (NpcTrader.isBusy()) {
-                s = s + " | " + NpcTrader.status();
-            }
             if (!ChainEngine.lastMessage().isEmpty()) {
                 s = s + " | " + ChainEngine.lastMessage();
             }
@@ -107,24 +104,6 @@ public class AMCClientCommand extends CommandBase {
             for (String s : npcs) {
                 msg(sender, s);
             }
-            return;
-        }
-        if (cmd.equals("trade")) {
-            if (args.length < 2) {
-                msg(sender, "用法: /amc trade <物品|hand> [all|数量] [第几件]");
-                return;
-            }
-            String mode = args.length >= 3 ? args[2] : "all";
-            int idx = 1;
-            if (args.length >= 4) {
-                try {
-                    idx = Integer.parseInt(args[3]);
-                } catch (Exception e) {
-                    idx = 1;
-                }
-            }
-            String r = NpcTrader.start(args[1], mode, idx);
-            msg(sender, r == null ? "§a开始交易" : r);
             return;
         }
         if (cmd.equals("slot")) {

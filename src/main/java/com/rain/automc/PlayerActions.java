@@ -201,6 +201,12 @@ public class PlayerActions {
         if (want.isEmpty()) {
             return false;
         }
+        int raw = org.lwjgl.input.Keyboard.getKeyIndex(name.trim().toUpperCase());
+        if (raw != 0) {
+            KeyBinding.setKeyBindState(raw, true);
+            keyReleases.add(new long[]{raw, System.currentTimeMillis() + Math.max(50, ms)});
+            return true;
+        }
         for (int i = 0; i < all.length; ++i) {
             KeyBinding kb = all[i];
             if (kb == null) {

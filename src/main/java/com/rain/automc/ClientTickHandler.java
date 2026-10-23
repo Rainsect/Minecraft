@@ -37,7 +37,6 @@ public class ClientTickHandler {
         }
         this.tickHotkeys(mc);
         PlayerActions.tick();
-        NpcTrader.tick();
         ChainEngine.tick();
         this.scanner.tick();
     }

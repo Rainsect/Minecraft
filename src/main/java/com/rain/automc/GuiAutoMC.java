@@ -79,7 +79,7 @@ public class GuiAutoMC extends GuiBase {
         this.text("AutoMC", 24, y, TEXT);
         int tw = this.textWidth("AutoMC");
         this.fill(24 + tw + 8, y + 2, 1, 11, 0x44FFFFFF);
-        this.text("v1.1.0", 24 + tw + 15, y, accentText());
+        this.text("v1.2.3", 24 + tw + 15, y, accentText());
         if (!this.compact()) {
             this.text("\u9879\u76ee\u5f0f\u81ea\u52a8\u5316  \u00b7  " + Catalog.count(false) + " \u52a8\u4f5c / "
                     + Catalog.count(true) + " \u4e8b\u4ef6", 24, y + 16, SUB);
@@ -214,13 +214,14 @@ public class GuiAutoMC extends GuiBase {
         int tx = gx - 6 - mw;
         boolean th = this.isHover(9300);
         boolean armed = this.confirmDel == this.sel && System.currentTimeMillis() - this.confirmAt < 2500L;
-        this.round(tx, y, mw, h, 5, armed ? 0xCC8E1F24 : (th ? 0xFF3A2226 : 0xFF241A1D));
-        this.outline(tx, y, mw, h, armed ? 0xFFFF6B6B : 0x55FF6B6B);
+        this.round(tx, y, mw, h, 5, th ? 0xFF2A3646 : 0xFF1F2833);
+        this.outline(tx, y, mw, h, armed ? 0xAAFF6B6B : 0x33FFFFFF);
         int ix = tx + mw / 2;
         int iy = y + (h - 8) / 2 - 1;
-        this.fill(ix - 6, iy, 12, 2, RED);
-        this.fill(ix - 3, iy - 2, 6, 2, RED);
-        this.fill(ix - 5, iy + 3, 10, 8, RED);
+        int ic = armed ? 0xFFFF8A8A : RED;
+        this.fill(ix - 6, iy, 12, 2, ic);
+        this.fill(ix - 3, iy - 2, 6, 2, ic);
+        this.fill(ix - 5, iy + 3, 10, 8, ic);
         this.fill(ix - 2, iy + 5, 1, 4, 0xFF2A0F12);
         this.fill(ix + 1, iy + 5, 1, 4, 0xFF2A0F12);
         this.hot(9300, tx, y, mw, h, null);
@@ -276,9 +277,6 @@ public class GuiAutoMC extends GuiBase {
         }
         if (id == 9001) {
             ScriptChain c = new ScriptChain("\u9879\u76ee " + (list.size() + 1));
-            ScriptAction ev = new ScriptAction("\u624b\u52a8");
-            ev.fillDefaults();
-            c.actions.add(ev);
             int at = ConfigManager.add(c);
             if (at < 0) {
                 PlayerActions.chatSelf("\u00a7c\u9879\u76ee\u6570\u8fbe\u4e0a\u9650");
