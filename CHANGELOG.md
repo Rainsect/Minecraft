@@ -31,17 +31,6 @@
 
 - `mcmod.info` 不再用 Gradle `expand` 注入版本号：过滤按平台默认编码（Windows 上是 GBK）读写，UTF-8 中文描述会被写坏成乱码。版本号直接写在文件里，`processResources` 统一 `filteringCharset = 'UTF-8'`
 
-## [未发布]
-
-### 修复
-- `NpcTrader` 读取商人配方的反射调用改为「MCP 名 + SRG 名」双名回退，开发环境下也能取到商品名
-
-### 其他
-- 仓库结构规范化为标准 Forge 工程：源码移入 `src/main/java`，新增 `build.gradle` / `gradle.properties` / Gradle Wrapper
-- 源码中的 SRG 中间名（`func_*` / `field_*`）全部还原为 MCP 名，可直接编译
-- 新增 `LICENSE`（MIT）、`.gitignore`、`CHANGELOG.md`
-- README 重写：修正源码路径、构建方式与依赖说明
-
 ## [1.1.0] - 2026-10-22
 
 ### 变更
