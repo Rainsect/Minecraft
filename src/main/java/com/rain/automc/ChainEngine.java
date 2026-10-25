@@ -23,6 +23,7 @@ public class ChainEngine {
     private static int chainIndex = -1;
     private static int actionIndex = 0;
     private static long waitUntil = 0L;
+    private static String lastClickError = "";
     private static String lastMessage = "";
     private static final Map<String, String> vars = new HashMap<String, String>();
     private static final Random RAND = new Random();
@@ -485,7 +486,24 @@ public class ChainEngine {
         int y = a.intParam(1, 0);
         String btn = a.param(2) == null ? "" : a.param(2);
         int button = btn.contains("右") ? 1 : 0;
-        boolean shift = btn.toLowerCase().contains("shift");
-        return ScreenClicker.click(x, y, button, shift);
+        String lower = btn.toLowerCase();
+        boolean shift = lower.contains("shift") || lower.contains("快速");
+        // 逻辑层优先：槽位与标准按钮都能命中，不受窗口是否前台影响。
+        // 命中不了（世界内、纯自绘界面）再退回真鼠标，由它处理需要焦点的情况。
+        String logical = ScreenClicker.clickLogical(x, y, button, shift);
+        if (logical == null) {
+            lastClickError = "";
+            return null;
+        }
+        String error = ScreenClicker.click(x, y, button, shift);
+        if (error == null) {
+            lastClickError = "";
+            return null;
+        }
+        if (!error.equals(lastClickError)) {
+            lastClickError = error;
+            PlayerActions.chatSelf(error);
+        }
+        return error;
     }
 }

@@ -79,12 +79,16 @@ public class GuiAutoMC extends GuiBase {
         this.text("AutoMC", 24, y, TEXT);
         int tw = this.textWidth("AutoMC");
         this.fill(24 + tw + 8, y + 2, 1, 11, 0x44FFFFFF);
-        this.text("v1.2.3", 24 + tw + 15, y, accentText());
+        String ver = "v" + AutoMCMod.VERSION;
+        int vx = 24 + tw + 15;
+        this.text(ver, vx, y, accentText());
         if (!this.compact()) {
             this.text("\u9879\u76ee\u5f0f\u81ea\u52a8\u5316  \u00b7  " + Catalog.count(false) + " \u52a8\u4f5c / "
                     + Catalog.count(true) + " \u4e8b\u4ef6", 24, y + 16, SUB);
         } else {
-            this.text(Catalog.count(false) + " \u52a8\u4f5c / " + Catalog.count(true) + " \u4e8b\u4ef6", 24 + tw + 44, y, DIM);
+            // 版本号宽度是会变的，计数跟着它走，不要写死偏移
+            this.text(Catalog.count(false) + " \u52a8\u4f5c / " + Catalog.count(true) + " \u4e8b\u4ef6",
+                    vx + this.textWidth(ver) + 10, y, DIM);
         }
 
         String status = ChainEngine.isRunning() ? "\u8fd0\u884c\u4e2d \u00b7 " + ChainEngine.status() : "\u7a7a\u95f2";

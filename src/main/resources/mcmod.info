@@ -1,14 +1,16 @@
 [
   {
     "modid": "automc",
-    "name": "AutoMC",
-    "description": "项目式自动化：F8 打开。每个项目是一串「事件 + 动作」，可在界面里自由增删、排序、改参数。内置 20 种事件与 34 种动作（延迟、循环、跳转、条件、变量、走路、捡物、点击坐标、按键、视角等），事件任一命中即运行项目，服务器无需安装。",
-    "version": "1.2.5",
+    "name": "AutoMC v1.2.8",
+    "description": "项目式自动化：F8 打开。每个项目是一串「事件/侦测 + 动作」积木，可在界面里自由增删、排序、改参数。内置 20 种事件与 36 种动作（含延迟、循环、跳转、条件、变量、走路、捡物、NPC 交易、点击坐标、按键、视角等），事件任一命中即运行项目，服务器无需安装。",
+    "version": "1.2.8",
     "mcversion": "1.12.2",
-    "url": "https://github.com/Rainsect/Minecraft",
+    "url": "",
     "updateUrl": "",
-    "authorList": ["Rain"],
-    "credits": "行走模块参考 endframe v2.2 / EndNav 方案",
+    "authorList": [
+      "Rain"
+    ],
+    "credits": "",
     "logoFile": "",
     "screenshots": [],
     "dependencies": []

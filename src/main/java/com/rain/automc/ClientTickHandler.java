@@ -18,6 +18,7 @@ public class ClientTickHandler {
     private boolean keyLatch = false;
     private boolean[] hotDown = new boolean[0];
     private final EventScanner scanner = new EventScanner();
+    private Boolean pauseBackup;
 
     @SubscribeEvent
     public void onClientTick(TickEvent.ClientTickEvent event) {
@@ -35,10 +36,35 @@ public class ClientTickHandler {
         } else {
             this.keyLatch = false;
         }
+        this.keepRunningInBackground(mc);
         this.tickHotkeys(mc);
         PlayerActions.tick();
         ChainEngine.tick();
         this.scanner.tick();
+    }
+
+    /*
+     * 脚本运行期间临时关掉「失去焦点时暂停」。
+     *
+     * 不关的话，窗口一失焦，原版会 displayInGameMenu()，把背包/商店界面顶成暂停菜单，
+     * 后台点击就没有作用对象了——表现就是「前台有效、切走后台完全没反应」。
+     * 运行结束后恢复用户原本的设置，平时不影响正常游戏。
+     */
+    private void keepRunningInBackground(Minecraft mc) {
+        boolean needBackground = ChainEngine.isRunning()
+                || (mc.currentScreen instanceof net.minecraft.client.gui.inventory.GuiContainer);
+        if (needBackground) {
+            if (this.pauseBackup == null) {
+                this.pauseBackup = Boolean.valueOf(mc.gameSettings.pauseOnLostFocus);
+                mc.gameSettings.pauseOnLostFocus = false;
+            }
+        } else if (this.pauseBackup != null) {
+            // 只在窗口回到前台后再恢复；后台恢复会立刻触发暂停菜单，把界面顶掉
+            if (org.lwjgl.opengl.Display.isActive()) {
+                mc.gameSettings.pauseOnLostFocus = this.pauseBackup.booleanValue();
+                this.pauseBackup = null;
+            }
+        }
     }
 
     /* 项目绑定按键：只在没有界面打开时生效，按一次触发一次 */
