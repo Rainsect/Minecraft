@@ -9,7 +9,7 @@
 
 按一下按键，自动发消息、自动走路、自动点界面、自动交任务——不用记命令，不用写脚本，像搭积木一样把动作排成一条流程。
 
-> 当前最新版本：**1.2.9**，从 [Releases](https://github.com/Rainsect/Minecraft/releases) 下载。
+> 当前最新版本：**v1.2.9**，从 [Releases](https://github.com/Rainsect/Minecraft/releases) 下载。
 
 ---
 
