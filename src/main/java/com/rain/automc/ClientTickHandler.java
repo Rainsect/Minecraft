@@ -15,7 +15,6 @@ import net.minecraftforge.fml.relauncher.SideOnly;
  */
 @SideOnly(value=Side.CLIENT)
 public class ClientTickHandler {
-    private boolean keyLatch = false;
     private boolean[] hotDown = new boolean[0];
     private final EventScanner scanner = new EventScanner();
     private Boolean pauseBackup;
@@ -26,20 +25,17 @@ public class ClientTickHandler {
             return;
         }
         Minecraft mc = Minecraft.getMinecraft();
-        if (AutoMCMod.keyOpenGui != null && AutoMCMod.keyOpenGui.isPressed()) {
-            if (!this.keyLatch && mc.currentScreen == null) {
-                this.keyLatch = true;
-                if (mc.player != null) {
-                    mc.displayGuiScreen((GuiScreen)new GuiAutoMC());
-                }
-            }
-        } else {
-            this.keyLatch = false;
+        // 这个键只负责「打开」；关闭统一用 ESC（界面里的 ESC 会先保存）
+        if (AutoMCMod.keyOpenGui != null && AutoMCMod.keyOpenGui.isPressed()
+                && mc.player != null && mc.currentScreen == null) {
+            mc.displayGuiScreen((GuiScreen)new GuiAutoMC());
         }
         this.keepRunningInBackground(mc);
         this.tickHotkeys(mc);
-        PlayerActions.tick();
-        ChainEngine.tick();
+        KeyRouter.tick();
+        Engine.get().tick();
+        AutoFishing.tick();
+        Walker.tick();
         this.scanner.tick();
     }
 
@@ -51,7 +47,7 @@ public class ClientTickHandler {
      * 运行结束后恢复用户原本的设置，平时不影响正常游戏。
      */
     private void keepRunningInBackground(Minecraft mc) {
-        boolean needBackground = ChainEngine.isRunning()
+        boolean needBackground = Engine.get().isRunning()
                 || (mc.currentScreen instanceof net.minecraft.client.gui.inventory.GuiContainer);
         if (needBackground) {
             if (this.pauseBackup == null) {
@@ -80,11 +76,16 @@ public class ClientTickHandler {
             String key = list.get(i).hotkey;
             boolean down = false;
             if (key != null && !key.isEmpty()) {
-                int code = Keyboard.getKeyIndex(key);
-                down = code != 0 && Keyboard.isKeyDown(code);
+                if (KeyRouter.isMouse(key)) {
+                    int b = KeyRouter.mouseButton(key);
+                    down = b >= 0 && org.lwjgl.input.Mouse.isButtonDown(b);
+                } else {
+                    int code = Keyboard.getKeyIndex(key);
+                    down = code != 0 && Keyboard.isKeyDown(code);
+                }
             }
             if (down && !this.hotDown[i]) {
-                ChainEngine.run(i);
+                Engine.get().run(i);
             }
             this.hotDown[i] = down;
         }

@@ -78,12 +78,34 @@ public class ScriptAction {
     }
 
     public static String plainDefault(String def) {
+        // @ 开头是下拉选项（取第一个）；# 开头是按键捕获控件（整段就是默认键名）
         if (def != null && def.startsWith("@")) {
             String body = def.substring(1);
             int comma = body.indexOf(',');
             return comma < 0 ? body : body.substring(0, comma);
         }
+        if (def != null && def.startsWith("#")) {
+            return def.substring(1);
+        }
         return def == null ? "" : def;
+    }
+
+    /* 按当前参数值隐藏无关字段：延迟看模式、按键看模式、界面状态看类型 */
+    public static boolean hiddenParam(ScriptAction a, int index) {
+        String t = a.type;
+        if ("延迟".equals(t)) {
+            if ("随机".equals(a.param(3))) {
+                return index == 0;
+            }
+            return index == 1 || index == 2;
+        }
+        if ("按键".equals(t)) {
+            return index == 1 && "松开".equals(a.param(2));
+        }
+        if ("界面状态".equals(t)) {
+            return index == 1 && !"自定义".equals(a.param(0));
+        }
+        return false;
     }
 
     /* 列表里显示的一行摘要 */
@@ -105,6 +127,9 @@ public class ScriptAction {
         }
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < d.labels.length; ++i) {
+            if (ScriptAction.hiddenParam(this, i)) {
+                continue;
+            }
             String v = this.param(i);
             if (v.isEmpty()) {
                 continue;

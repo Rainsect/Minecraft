@@ -15,7 +15,7 @@ import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
 /*
- * 备用入口：/amc run <序号|项目名> | stop | status | list | vars | npc | slot
+ * 备用入口：/amc run <序号|项目名> | stop | status | list | npc | slot
  */
 @SideOnly(value = Side.CLIENT)
 public class AMCClientCommand extends CommandBase {
@@ -24,7 +24,7 @@ public class AMCClientCommand extends CommandBase {
     }
 
     public String getUsage(ICommandSender sender) {
-        return "/amc run <\u5e8f\u53f7|\u9879\u76ee\u540d> | stop | status | list | vars | npc | slot";
+        return "/amc run <\u5e8f\u53f7|\u9879\u76ee\u540d> | stop | status | list | npc | slot";
     }
 
     public int getRequiredPermissionLevel() {
@@ -48,17 +48,21 @@ public class AMCClientCommand extends CommandBase {
             return;
         }
         if (cmd.equals("stop")) {
-            ChainEngine.stop();
+            Engine.get().stop();
             msg(sender, "\u00a7a\u5df2\u505c\u6b62");
             return;
         }
         if (cmd.equals("status")) {
-            String s = ChainEngine.status();
-            if (EFWalker.isBusy()) {
-                s = s + " | " + EFWalker.status();
+            String s = Engine.get().status();
+            String held = KeyRouter.heldSummary();
+            if (!held.isEmpty()) {
+                s = s + " | \u6309\u4f4f " + held;
             }
-            if (!ChainEngine.lastMessage().isEmpty()) {
-                s = s + " | " + ChainEngine.lastMessage();
+            if (Walker.isBusy()) {
+                s = s + " | " + Walker.status();
+            }
+            if (!Engine.get().lastMessage().isEmpty()) {
+                s = s + " | " + Engine.get().lastMessage();
             }
             msg(sender, s);
             return;
@@ -71,11 +75,6 @@ public class AMCClientCommand extends CommandBase {
             }
             return;
         }
-        if (cmd.equals("vars")) {
-            List<String> vs = ChainEngine.describeVars();
-            msg(sender, vs.isEmpty() ? "\u6ca1\u6709\u53d8\u91cf" : vs.toString());
-            return;
-        }
         if (cmd.equals("run")) {
             if (args.length < 2) {
                 msg(sender, "\u7528\u6cd5: /amc run <\u5e8f\u53f7|\u9879\u76ee\u540d>");
@@ -84,11 +83,11 @@ public class AMCClientCommand extends CommandBase {
             String key = args[1];
             boolean ok;
             try {
-                ok = ChainEngine.run(Integer.parseInt(key) - 1);
+                ok = Engine.get().run(Integer.parseInt(key) - 1);
             } catch (NumberFormatException e) {
-                ok = ChainEngine.runByName(key);
+                ok = Engine.get().runByName(key);
             }
-            msg(sender, ok ? "\u00a7a\u5f00\u59cb\u6267\u884c" : ChainEngine.lastMessage());
+            msg(sender, ok ? "\u00a7a\u5f00\u59cb\u6267\u884c" : Engine.get().lastMessage());
             return;
         }
         if (cmd.equals("npc")) {

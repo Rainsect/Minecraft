@@ -12,8 +12,8 @@ import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
 /*
- * 单发交互动作：右键 / 左键 / 切换快捷栏。
- * 逻辑复刻原版 clickMouse / rightClickMouse 的判定分支。
+ * 单发交互动作：右键 / 左键 / 使用手中物品 / 切换快捷栏。
+ * 逻辑复刻原版 clickMouse / rightClickMouse 的判定分支，全部走游戏内 API。
  */
 @SideOnly(value=Side.CLIENT)
 public class ClickActions {
@@ -56,6 +56,17 @@ public class ClickActions {
             mc.playerController.processRightClick(player, mc.world, hand);
         }
         player.swingArm(hand);
+    }
+
+    /** 只使用手中的物品（吃东西 / 举盾 / 扔药水），不做方块与实体交互。 */
+    public static void useItem() {
+        Minecraft mc = Minecraft.getMinecraft();
+        EntityPlayerSP player = mc.player;
+        if (player == null) {
+            return;
+        }
+        mc.playerController.processRightClick(player, mc.world, EnumHand.MAIN_HAND);
+        player.swingArm(EnumHand.MAIN_HAND);
     }
 
     public static boolean selectHotbar(int slot) {

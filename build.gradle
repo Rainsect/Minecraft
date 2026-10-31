@@ -10,7 +10,7 @@ buildscript {
 
 apply plugin: 'net.minecraftforge.gradle.forge'
 
-version = mod_version
+version = "${mod_version}${version_suffix}"
 group = mod_group
 archivesBaseName = mod_id
 
@@ -29,35 +29,33 @@ minecraft {
     makeObfSourceJar = false
 }
 
-// 不要用 expand 往 mcmod.info 里注入版本号：Gradle 的过滤按平台默认编码（Windows 上是 GBK）读写，
-// UTF-8 的中文描述会被写坏成乱码。版本号直接写在 mcmod.info 里，资源原样复制。
+// mcmod.info 里的版本号按构建版本注入（1.2.10a 这种测试版号），中文描述按 UTF-8 读写。
 processResources {
+    inputs.property 'version', project.version
     filteringCharset = 'UTF-8'
-    from(sourceSets.main.resources.srcDirs)
+    from(sourceSets.main.resources.srcDirs) {
+        include 'mcmod.info'
+        expand 'version': project.version
+    }
+    from(sourceSets.main.resources.srcDirs) {
+        exclude 'mcmod.info'
+    }
 }
 
 repositories {
     mavenCentral()
 }
 
-// 「点击坐标」要用真正的鼠标事件：系统级点击是唯一能让 shift+左键、右键、界面外坐标都生效的办法。
-// JNA 只用来问 Windows 游戏窗口的客户区在屏幕上的位置，打包进 jar，不依赖其他 mod。
-configurations {
-    embed
-}
-
+// Baritone 只编译期引用：玩家自己装 Baritone 时寻路才生效，没装就回退到内置行走。
+// 这个 jar 不随仓库分发（.gitignore 忽略 *.jar）；本地没有时跳过，照样能编译。
 dependencies {
-    embed 'net.java.dev.jna:jna:4.5.2'
+    File baritone = file('libs/baritone-api-forge-1.2.19.jar')
+    if (baritone.exists()) {
+        compileOnly files(baritone)
+    }
 }
-
-sourceSets.main.compileClasspath += configurations.embed
 
 jar {
-    from {
-        configurations.embed.collect { it.isDirectory() ? it : zipTree(it) }
-    }
-    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
-    exclude 'META-INF/LICENSE', 'META-INF/NOTICE', 'META-INF/maven/**'
     manifest {
         attributes(
             'Specification-Title': mod_name,

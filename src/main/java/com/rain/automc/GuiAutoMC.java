@@ -14,6 +14,12 @@ public class GuiAutoMC extends GuiBase {
     private int sel = 0;
     private int confirmDel = -1;
     private long confirmAt = 0L;
+    /* 卡片拖动排序：按下卡片先「预备」，拖动超过阈值才真正开始 */
+    private int dragFrom = -1;
+    private int dragArmed = -1;
+    private int dragStartY = 0;
+    private int mouseX = 0;
+    private int mouseY = 0;
 
     public void initGui() {
         this.scroll = 0;
@@ -63,6 +69,9 @@ public class GuiAutoMC extends GuiBase {
     }
 
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
+        this.mouseX = mouseX;
+        this.mouseY = mouseY;
+        this.tickDrag();
         int prev = this.hitTest(mouseX, mouseY);
         this.hots.clear();
         this.hover = prev;
@@ -91,14 +100,23 @@ public class GuiAutoMC extends GuiBase {
                     vx + this.textWidth(ver) + 10, y, DIM);
         }
 
-        String status = ChainEngine.isRunning() ? "\u8fd0\u884c\u4e2d \u00b7 " + ChainEngine.status() : "\u7a7a\u95f2";
-        int color = ChainEngine.isRunning() ? GREEN : DIM;
+        String status = Engine.get().isRunning() ? "\u8fd0\u884c\u4e2d \u00b7 " + Engine.get().status() : "\u7a7a\u95f2";
+        int color = Engine.get().isRunning() ? GREEN : DIM;
         int right = this.width - 24;
         this.textRight(status, right, y, color);
         if (!this.compact()) {
-            this.textRight("F8 \u5f00\u5173\u754c\u9762  \u00b7  ESC \u4fdd\u5b58\u9000\u51fa", right, y + 16, DIM);
+            this.textRight(this.openKeyName() + " \u6253\u5f00\u754c\u9762  \u00b7  ESC \u4fdd\u5b58\u9000\u51fa", right, y + 16, DIM);
         }
         this.divider(24, this.headerH() - 4, this.width - 48);
+    }
+
+    /* 右上角提示用实际绑定键，改了「控制」里的键也能对上 */
+    private String openKeyName() {
+        if (AutoMCMod.keyOpenGui == null) {
+            return "\u672a\u7ed1\u5b9a";
+        }
+        String n = org.lwjgl.input.Keyboard.getKeyName(AutoMCMod.keyOpenGui.getKeyCode());
+        return n == null || n.isEmpty() || "NONE".equalsIgnoreCase(n) ? "\u672a\u7ed1\u5b9a" : n;
     }
 
     private void drawList() {
@@ -118,17 +136,56 @@ public class GuiAutoMC extends GuiBase {
         }
         int y = this.listTop();
         for (int i = this.scroll; i < list.size() && i < this.scroll + vis; ++i) {
-            this.drawCard(i, list.get(i), x, y, w);
+            if (i == this.dragFrom) {
+                this.drawDropSlot(x, y, w);
+            } else {
+                this.drawCard(i, list.get(i), x, y, w);
+            }
             y += this.cardH() + this.gap();
+        }
+        if (this.dragFrom >= 0 && this.dragFrom < list.size()) {
+            int to = this.cardIndexAt(this.mouseY);
+            if (to >= 0) {
+                int base = this.listTop() + (to - this.scroll) * (this.cardH() + this.gap());
+                int lineY = (to >= this.dragFrom ? base + this.cardH() + this.gap() : base) - 1;
+                this.fill(x, lineY, w, 3, this.accentFill());
+                this.ghostCard(list.get(this.dragFrom), x, this.mouseY - this.cardH() / 2, w);
+            }
         }
         this.scrollbar(x + w + 5, this.listTop(), this.listBottom() - this.listTop(), list.size(), vis, this.scroll);
     }
 
+    /* 拖动时原位置留一个空槽，让人一眼看出卡片被拿起来了 */
+    private void drawDropSlot(int x, int y, int w) {
+        int h = this.cardH();
+        this.card(x, y, w, h, 0x2A10161D, 0x44FFFFFF);
+    }
+
+    /* 跟着鼠标走的半透明卡片，拖动过程有实感 */
+    private void ghostCard(ScriptChain c, int x, int y, int w) {
+        int h = this.cardH();
+        this.fill(x + 3, y + 5, w, h, 0x55000000);
+        this.card(x, y, w, h, 0xF0222C39, this.accentAlpha(0xCC));
+        this.round(x + (this.compact() ? 7 : 9), y + 8, 3, h - 16, 2, this.accentFill());
+        int tw = w - (this.compact() ? 34 : 40);
+        this.text(this.clip(c.name, tw), x + 20, y + (h - 8) / 2, TEXT);
+    }
+
+    /* 鼠标落在第几张卡片（不拖到底部时返回最后一张） */
+    private int cardIndexAt(int my) {
+        List<ScriptChain> list = ConfigManager.get().chains;
+        if (list.isEmpty() || my < this.listTop() || my >= this.listBottom()) {
+            return -1;
+        }
+        int idx = this.scroll + (my - this.listTop()) / (this.cardH() + this.gap());
+        return Math.max(0, Math.min(idx, list.size() - 1));
+    }
+
     private void drawCard(int i, ScriptChain c, int x, int y, int w) {
         int h = this.cardH();
-        boolean hov = this.isHover(1000 + i);
+        boolean hov = this.isHover(1000 + i) || this.dragArmed == i;
         boolean chosen = this.sel == i;
-        boolean running = ChainEngine.runningChain() == i;
+        boolean running = Engine.get().runningChain() == i;
         boolean on = c.isEnabled();
         int fill = running ? 0xFF16281F : (chosen ? PANEL_SEL : (hov ? PANEL_HI : (on ? PANEL : 0xFF11161D)));
         int border = running ? 0x8841D391 : (chosen ? this.accentAlpha(0x66) : (hov ? 0x55FFFFFF : LINE));
@@ -253,10 +310,10 @@ public class GuiAutoMC extends GuiBase {
             int i = id - 2000;
             if (i >= 0 && i < list.size()) {
                 this.sel = i;
-                if (ChainEngine.runningChain() == i) {
-                    ChainEngine.stop();
-                } else if (!ChainEngine.run(i)) {
-                    PlayerActions.chatSelf(ChainEngine.lastMessage());
+                if (Engine.get().runningChain() == i) {
+                    Engine.get().stop();
+                } else if (!Engine.get().run(i)) {
+                    PlayerActions.chatSelf(Engine.get().lastMessage());
                 }
             }
             return;
@@ -272,8 +329,8 @@ public class GuiAutoMC extends GuiBase {
             if (i >= 0 && i < list.size()) {
                 ScriptChain c = list.get(i);
                 c.setEnabled(!c.isEnabled());
-                if (!c.isEnabled() && ChainEngine.runningChain() == i) {
-                    ChainEngine.stop();
+                if (!c.isEnabled() && Engine.get().runningChain() == i) {
+                    Engine.get().stop();
                 }
                 ConfigManager.save();
             }
@@ -326,6 +383,62 @@ public class GuiAutoMC extends GuiBase {
                 this.scroll = 0;
             }
         }
+    }
+
+    /* 鼠标移动超过阈值才真正进入拖动，单纯点击不会误触发 */
+    private void tickDrag() {
+        if (this.dragArmed >= 0 && this.dragFrom < 0
+                && Math.abs(this.mouseY - this.dragStartY) >= 4) {
+            this.dragFrom = this.dragArmed;
+        }
+    }
+
+    /* 按下卡片先「预备」，拖动超过 4px 才开始；松手时按位移判断是否真的拖过 */
+    @Override
+    protected void mouseClicked(int mx, int my, int button) throws java.io.IOException {
+        this.mouseX = mx;
+        this.mouseY = my;
+        if (button == 0) {
+            int id = this.hitTest(mx, my);
+            if (id >= 1000 && id < 2000) {
+                this.dragArmed = id - 1000;
+                this.dragFrom = -1;
+                this.dragStartY = my;
+            }
+        }
+        super.mouseClicked(mx, my, button);
+    }
+
+    @Override
+    protected void mouseClickMove(int mx, int my, int clickedButton, long timeSinceLastClick) {
+        this.mouseX = mx;
+        this.mouseY = my;
+        if (this.dragArmed >= 0 && this.dragFrom < 0 && clickedButton == 0
+                && Math.abs(my - this.dragStartY) >= 4) {
+            this.dragFrom = this.dragArmed;
+        }
+        super.mouseClickMove(mx, my, clickedButton, timeSinceLastClick);
+    }
+
+    @Override
+    protected void mouseReleased(int mx, int my, int button) {
+        this.mouseX = mx;
+        this.mouseY = my;
+        if (button == 0) {
+            boolean moved = this.dragArmed >= 0 && Math.abs(my - this.dragStartY) >= 4;
+            int from = this.dragFrom >= 0 ? this.dragFrom : (moved ? this.dragArmed : -1);
+            int to = from >= 0 ? this.cardIndexAt(my) : -1;
+            this.dragFrom = -1;
+            this.dragArmed = -1;
+            List<ScriptChain> list = ConfigManager.get().chains;
+            if (to >= 0 && to != from && from < list.size()) {
+                ScriptChain c = list.remove(from);
+                list.add(Math.min(to, list.size()), c);
+                this.sel = Math.min(to, list.size() - 1);
+                ConfigManager.save();
+            }
+        }
+        super.mouseReleased(mx, my, button);
     }
 
     public void keyTyped(char typedChar, int keyCode) throws java.io.IOException {

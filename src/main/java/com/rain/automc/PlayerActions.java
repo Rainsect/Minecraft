@@ -1,12 +1,8 @@
 package com.rain.automc;
 
-import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;
-import net.minecraft.client.gui.GuiScreen;
-import net.minecraft.client.gui.inventory.GuiInventory;
-import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
@@ -18,32 +14,12 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 
 /*
  * 动作执行原语：把 Minecraft 客户端那些零散的操作包成一行调用。
- * 需要跨 tick 维持的（按住前进、连按、按键松开）由 tick() 统一收尾。
+ * 全部走游戏内 API，不依赖窗口焦点。
  */
 @SideOnly(value=Side.CLIENT)
 public class PlayerActions {
-    private static long forwardUntil = 0L;
-    private static boolean forwardOn = false;
-    private static final List<long[]> keyReleases = new ArrayList<long[]>();
-
-    public static void setForward(float v) {
-        EntityPlayerSP p = Minecraft.getMinecraft().player;
-        if (p == null || p.movementInput == null) {
-            return;
-        }
-        p.movementInput.moveForward = v;
-    }
-
-    public static void holdForward(int ms) {
-        forwardOn = true;
-        forwardUntil = System.currentTimeMillis() + Math.max(50L, (long)ms);
-        setForward(1.0f);
-    }
-
     public static void stopMove() {
         EntityPlayerSP p = Minecraft.getMinecraft().player;
-        forwardOn = false;
-        forwardUntil = 0L;
         if (p == null) {
             return;
         }
@@ -65,18 +41,14 @@ public class PlayerActions {
         }
     }
 
-    public static void sprint(boolean on) {
+    /** @return 这一下是否真的起跳（不在地上时不跳）。 */
+    public static boolean jump() {
         EntityPlayerSP p = Minecraft.getMinecraft().player;
-        if (p != null) {
-            p.setSprinting(on);
+        if (p == null || !p.onGround) {
+            return false;
         }
-    }
-
-    public static void jump() {
-        EntityPlayerSP p = Minecraft.getMinecraft().player;
-        if (p != null && p.onGround) {
-            p.motionY = 0.42;
-        }
+        p.motionY = 0.42;
+        return true;
     }
 
     public static void look(float yaw, float pitch) {
@@ -96,7 +68,7 @@ public class PlayerActions {
         if (p == null || mc.world == null) {
             return false;
         }
-        Entity t = nearest(p, 64.0f, "\u73a9\u5bb6");
+        Entity t = nearest(p, 64.0f, "玩家");
         if (!(t instanceof EntityPlayer)) {
             return false;
         }
@@ -147,8 +119,8 @@ public class PlayerActions {
             if (e == p || !e.isEntityAlive()) {
                 continue;
             }
-            boolean wantPlayer = "\u73a9\u5bb6".equals(type);
-            boolean wantMob = "\u602a\u7269".equals(type);
+            boolean wantPlayer = "玩家".equals(type);
+            boolean wantMob = "怪物".equals(type);
             if (wantPlayer && !(e instanceof EntityPlayer)) {
                 continue;
             }
@@ -171,19 +143,11 @@ public class PlayerActions {
         }
     }
 
-    public static void openInventory() {
-        Minecraft mc = Minecraft.getMinecraft();
-        if (mc.player != null) {
-            mc.displayGuiScreen((GuiScreen)new GuiInventory((EntityPlayer)mc.player));
+    public static void chat(String text) {
+        EntityPlayerSP p = Minecraft.getMinecraft().player;
+        if (p != null && text != null && !text.isEmpty()) {
+            p.sendChatMessage(text);
         }
-    }
-
-    public static void closeScreen() {
-        Minecraft.getMinecraft().displayGuiScreen((GuiScreen)null);
-    }
-
-    public static void clipboard(String text) {
-        GuiScreen.setClipboardString(text);
     }
 
     public static void chatSelf(String text) {
@@ -193,66 +157,9 @@ public class PlayerActions {
         }
     }
 
-    /* 按键：按 key.* 描述名匹配原版按键，按住 ms 后自动松开 */
-    public static boolean pressKey(String name, int ms) {
-        Minecraft mc = Minecraft.getMinecraft();
-        KeyBinding[] all = mc.gameSettings.keyBindings;
-        String want = name == null ? "" : name.trim().toLowerCase();
-        if (want.isEmpty()) {
-            return false;
-        }
-        int raw = org.lwjgl.input.Keyboard.getKeyIndex(name.trim().toUpperCase());
-        if (raw != 0) {
-            KeyBinding.setKeyBindState(raw, true);
-            keyReleases.add(new long[]{raw, System.currentTimeMillis() + Math.max(50, ms)});
-            return true;
-        }
-        for (int i = 0; i < all.length; ++i) {
-            KeyBinding kb = all[i];
-            if (kb == null) {
-                continue;
-            }
-            String desc = kb.getKeyDescription();
-            if (desc == null) {
-                continue;
-            }
-            if (desc.toLowerCase().equals(want) || desc.toLowerCase().replace("key.", "").equals(want)) {
-                int code = kb.getKeyCode();
-                KeyBinding.setKeyBindState(code, true);
-                keyReleases.add(new long[]{code, System.currentTimeMillis() + Math.max(50, ms)});
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public static void tick() {
-        long now = System.currentTimeMillis();
-        if (forwardOn) {
-            if (now >= forwardUntil) {
-                forwardOn = false;
-                setForward(0.0f);
-            } else {
-                setForward(1.0f);
-            }
-        }
-        for (int i = keyReleases.size() - 1; i >= 0; --i) {
-            long[] r = keyReleases.get(i);
-            if (now >= r[1]) {
-                KeyBinding.setKeyBindState((int)r[0], false);
-                keyReleases.remove(i);
-            }
-        }
-    }
-
     public static void resetAll() {
         stopMove();
         sneak(false);
-        sprint(false);
-        for (int i = keyReleases.size() - 1; i >= 0; --i) {
-            long[] r = keyReleases.get(i);
-            KeyBinding.setKeyBindState((int)r[0], false);
-            keyReleases.remove(i);
-        }
+        KeyRouter.releaseAll();
     }
 }

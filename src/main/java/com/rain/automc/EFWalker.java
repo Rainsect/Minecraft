@@ -427,7 +427,7 @@ public class EFWalker {
         }
     }
 
-    private static BlockPos scanTargets(EntityPlayerSP player, Block block, int rx, int ry, int rz) {        World world = player.world;
+    public static BlockPos scanTargets(EntityPlayerSP player, Block block, int rx, int ry, int rz) {        World world = player.world;
         int px = (int)Math.floor(player.posX);
         int py = (int)Math.floor(player.posY);
         int pz = (int)Math.floor(player.posZ);
@@ -453,7 +453,7 @@ public class EFWalker {
         return best;
     }
 
-    private static double targetDistXZ(EntityPlayerSP player, BlockPos pos) {
+    public static double targetDistXZ(EntityPlayerSP player, BlockPos pos) {
         double dx = (double)pos.getX() + 0.5 - player.posX;
         double dz = (double)pos.getZ() + 0.5 - player.posZ;
         return Math.sqrt(dx * dx + dz * dz);

@@ -3,6 +3,13 @@ package com.rain.automc;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;
+import net.minecraft.client.gui.GuiChat;
+import net.minecraft.client.gui.GuiIngameMenu;
+import net.minecraft.client.gui.GuiMerchant;
+import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.gui.inventory.GuiChest;
+import net.minecraft.client.gui.inventory.GuiContainer;
+import net.minecraft.client.gui.inventory.GuiInventory;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
@@ -16,7 +23,7 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 
 /*
  * 事件侦测：把一个项目里所有「事件」积木逐个求值，命中就启动该项目。
- * 每秒轮询两次重条件，进服/死亡/复活/受伤/切维度/聊天走即时分支。
+ * 每秒轮询两次重条件，进服/死亡/受伤/切维度/聊天/界面状态走即时分支。
  */
 @SideOnly(value=Side.CLIENT)
 public class EventScanner {
@@ -31,6 +38,8 @@ public class EventScanner {
     private String lastChat = "";
     private long[] nextFire = new long[0];
     private long[] timerAcc = new long[0];
+    /** 每个项目上一 tick 是否处于「界面打开」状态，用于「沿触发」只跳一次。 */
+    private boolean[] screenOpen = new boolean[0];
 
     public void tick() {
         Minecraft mc = Minecraft.getMinecraft();
@@ -46,12 +55,15 @@ public class EventScanner {
         if (this.nextFire.length != n) {
             long[] a = new long[n];
             long[] b = new long[n];
+            boolean[] s = new boolean[n];
             for (int i = 0; i < Math.min(n, this.nextFire.length); ++i) {
                 a[i] = this.nextFire[i];
                 b[i] = this.timerAcc[i];
+                s[i] = this.screenOpen[i];
             }
             this.nextFire = a;
             this.timerAcc = b;
+            this.screenOpen = s;
         }
         long now = System.currentTimeMillis();
 
@@ -76,7 +88,6 @@ public class EventScanner {
         } else {
             if (this.deathFired) {
                 this.deathFired = false;
-                this.fire("\u590d\u6d3b", now, null);
             }
             if (this.hurtArmed && hp < this.lastHealth - 0.01f) {
                 this.fire("\u53d7\u4f24", now, null);
@@ -98,6 +109,7 @@ public class EventScanner {
             this.scanAcc = 0L;
             this.scan(player, mc, now);
         }
+        this.screenTick(player, mc, now);
 
         if (!this.lastChat.isEmpty() && now - this.lastChatAt > 600L) {
             this.lastChat = "";
@@ -155,9 +167,6 @@ public class EventScanner {
         if (t.equals("\u80cc\u5305\u7269\u54c1")) {
             return NpcTrader.countItem(p, a.param(0)) >= Math.max(1, a.intParam(1, 64));
         }
-        if (t.equals("\u80cc\u5305\u6ee1")) {
-            return NpcTrader.inventoryFull(p);
-        }
         if (t.equals("\u7ecf\u9a8c\u7b49\u7ea7")) {
             return p.experienceLevel >= a.intParam(0, 30);
         }
@@ -205,6 +214,86 @@ public class EventScanner {
         if (t.equals("\u804a\u5929\u542b\u5173\u952e\u8bcd")) {
             String kw = a.param(0);
             return !kw.isEmpty() && !this.lastChat.isEmpty() && this.lastChat.contains(kw);
+        }
+        return false;
+    }
+
+    /*
+     * 界面状态事件：每个 tick 看一次当前界面，按每个项目的「沿触发/持续」模式决定是否启动。
+     * 自绘界面（GuiBase）不算，避免打开 AutoMC 自己触发。
+     */
+    private void screenTick(EntityPlayerSP p, Minecraft mc, long now) {
+        List<ScriptChain> list = ConfigManager.get().chains;
+        if (this.screenOpen.length != list.size()) {
+            return;
+        }
+        GuiScreen screen = mc.currentScreen;
+        for (int i = 0; i < list.size(); ++i) {
+            ScriptChain c = list.get(i);
+            if (!c.isEnabled()) {
+                continue;
+            }
+            boolean matched = false;
+            boolean edge = false;
+            for (int k = 0; k < c.actions.size(); ++k) {
+                ScriptAction a = c.actions.get(k);
+                if (!a.enabled || !a.isEvent() || !a.type.equals("\u754c\u9762\u72b6\u6001")) {
+                    continue;
+                }
+                if (!this.screenMatch(screen, a)) {
+                    continue;
+                }
+                matched = true;
+                if ("\u6cbf\u89e6\u53d1".equals(a.param(2))) {
+                    if (!this.screenOpen[i]) {
+                        edge = true;
+                    }
+                } else {
+                    edge = true;
+                }
+            }
+            boolean wasOpen = this.screenOpen[i];
+            this.screenOpen[i] = matched;
+            if (edge && (wasOpen || matched)) {
+                if (now < this.nextFire[i]) {
+                    continue;
+                }
+                this.start(i, now);
+            }
+        }
+    }
+
+    /** 当前界面是否属于事件指定的类型。 */
+    private boolean screenMatch(GuiScreen s, ScriptAction a) {
+        if (s == null || s instanceof GuiBase) {
+            return false;
+        }
+        String type = a.param(0);
+        if (type.equals("\u5168\u90e8") || type.equals("\u4efb\u610f\u754c\u9762")) {
+            return true;
+        }
+        if (type.equals("\u4efb\u610f\u5bb9\u5668")) {
+            return s instanceof GuiContainer;
+        }
+        if (type.equals("\u80cc\u5305")) {
+            return s instanceof GuiInventory;
+        }
+        if (type.equals("\u7bb1\u5b50")) {
+            return s instanceof GuiChest;
+        }
+        if (type.equals("\u5546\u8d29")) {
+            return s instanceof GuiMerchant;
+        }
+        if (type.equals("\u804a\u5929")) {
+            return s instanceof GuiChat;
+        }
+        if (type.equals("ESC")) {
+            return s instanceof GuiIngameMenu;
+        }
+        if (type.equals("\u81ea\u5b9a\u4e49")) {
+            String cls = a.param(1).trim();
+            return !cls.isEmpty()
+                    && (s.getClass().getName().equals(cls) || s.getClass().getSimpleName().equals(cls));
         }
         return false;
     }
@@ -267,14 +356,15 @@ public class EventScanner {
     }
 
     private void start(int idx, long now) {
+        Engine engine = Engine.get();
+        if (engine.isRunning()) {
+            return;
+        }
         ScriptChain c = ConfigManager.get().chains.get(idx);
         int cd = Math.max(1, c.cooldownSec);
         this.nextFire[idx] = now + (long)cd * 1000L;
-        if (ChainEngine.isRunning()) {
-            return;
-        }
-        if (!ChainEngine.run(idx)) {
-            ChainEngine.lastMessage();
+        if (!engine.run(idx)) {
+            engine.lastMessage();
         }
     }
 }

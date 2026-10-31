@@ -87,7 +87,12 @@ public class GuiProject extends GuiBase {
     }
 
     private int panelH() {
-        return this.compact() ? 74 + (this.paramRows - 1) * 38 : 108;
+        return (this.compact() ? 74 : 108) + (this.paramRows - 1) * 38;
+    }
+
+    /* 所有参数控件统一宽度，变量框与模式框不再大小不一 */
+    private int paramW() {
+        return 130;
     }
 
     private int toolbarH() {
@@ -159,18 +164,9 @@ public class GuiProject extends GuiBase {
         }
     }
 
-    /* NPC交易：物品ID 只在「指定ID」时出现，数量只在「指定数量」时出现 */
+    /* 参数可见性统一由 ScriptAction 提供，摘要与编辑区用同一套规则 */
     private boolean hiddenParam(ScriptAction a, int index) {
-        if (!"NPC\u4ea4\u6613".equals(a.type)) {
-            return false;
-        }
-        if (index == 1) {
-            return !a.param(0).contains("ID");
-        }
-        if (index == 3) {
-            return !a.param(2).contains("\u6307\u5b9a");
-        }
-        return false;
+        return ScriptAction.hiddenParam(a, index);
     }
 
     private void buildParams(ScriptAction a) {
@@ -183,7 +179,7 @@ public class GuiProject extends GuiBase {
         int used = 0;
         int rows = 1;
         for (int i = 0; i < d.labels.length; ++i) {
-            int w = Math.min(d.widths[i], 200);
+            int w = this.paramW();
             if (used > 0 && used + w + 12 > avail) {
                 ++rows;
                 used = 0;
@@ -195,13 +191,13 @@ public class GuiProject extends GuiBase {
         int x = this.listX() + 10;
         this.rowTop = this.panelY() + this.panelH() - 44 - (this.paramRows - 1) * 38;
         int y = this.rowTop + 13;
-        int maxRight = this.listX() + this.listW() - 82;
+        int maxRight = this.listX() + this.listW() - 10;
         int maxY = this.panelY() + this.panelH() - 31;
         for (int i = 0; i < d.labels.length; ++i) {
             if (this.hiddenParam(a, i)) {
                 continue;
             }
-            int w = Math.min(d.widths[i], 200);
+            int w = this.paramW();
             if (x + w > maxRight && x > this.listX() + 10) {
                 x = this.listX() + 10;
                 y += 38;
@@ -210,13 +206,14 @@ public class GuiProject extends GuiBase {
                 break;
             }
             String def = d.defaults[i];
-            if (def != null && def.equals("!")) {
-                this.keyRects.add(new int[]{i, x, y, w, 16});
+            // # 开头 = 按键捕获控件（旧版本用默认值 "!" 当标记，已废弃）
+            if (def != null && def.startsWith("#")) {
+                this.keyRects.add(new int[]{i, x, y, w, 22});
                 x += w + 12;
                 continue;
             }
             if (def != null && def.startsWith("@")) {
-                this.choiceRects.add(new int[]{i, x, y, w, 16});
+                this.choiceRects.add(new int[]{i, x, y, w, 22});
                 x += w + 12;
                 continue;
             }
@@ -272,7 +269,7 @@ public class GuiProject extends GuiBase {
         boolean hkHover = this.isHover(5110);
         this.round(hkX, hkY, hkW, hkH, 5, this.awaitKey ? this.accentAlpha(0x88) : (hkHover ? 0xFF2C3949 : 0xFF1F2833));
         this.outline(hkX, hkY, hkW, hkH, 0x33FFFFFF);
-        String hkLabel = this.awaitKey ? "按任意键" : (c.hotkey == null || c.hotkey.isEmpty() ? "绑定按键" : "按键 " + c.hotkey);
+        String hkLabel = this.awaitKey ? "按任意键" : (c.hotkey == null || c.hotkey.isEmpty() ? "绑定按键" : "按键 " + KeyRouter.label(c.hotkey));
         this.textCenter(this.clip(hkLabel, hkW - 6), hkX + hkW / 2, hkY + (hkH - 8) / 2, hkHover || this.awaitKey ? 0xFFFFFFFF : SUB);
         this.hot(5110, hkX, hkY, hkW, hkH, null);
 
@@ -287,8 +284,8 @@ public class GuiProject extends GuiBase {
                 c.isEnabled() ? 0xFFB9F5D6 : 0xFFF3C98B);
         this.hot(5100, tx0, tbY, toggleW, tbH, null);
 
-        if (ChainEngine.runningChain() == this.index) {
-            this.textRight("\u8fd0\u884c\u4e2d " + ChainEngine.status(), tx0 - 8, this.compact() ? 13 : 26, GREEN);
+        if (Engine.get().runningChain() == this.index) {
+            this.textRight("\u8fd0\u884c\u4e2d " + Engine.get().status(), tx0 - 8, this.compact() ? 13 : 26, GREEN);
         }
         this.divider(10, this.headerH() - 4, this.width - 20);
     }
@@ -412,24 +409,24 @@ public class GuiProject extends GuiBase {
             boolean hov = this.isHover(pid);
             boolean waiting = this.awaitKeyParam == r[0];
             String key = a.param(r[0]);
-            this.text("\u6309\u952e", r[1], r[2] - 14, SUB);
+            this.text(d == null ? "" : d.labels[r[0]], r[1], r[2] - 14, SUB);
             this.round(r[1], r[2] - 1, r[3], 22, 4,
                     waiting ? this.accentAlpha(0x88) : (hov ? 0xFF2C3949 : 0xFF1A222E));
             this.outline(r[1], r[2] - 1, r[3], 22, hov || waiting ? this.accentAlpha(0x99) : 0x22FFFFFF);
-            String label = waiting ? "\u6309\u4e0b\u4efb\u610f\u952e" : (key == null || key.isEmpty() ? "\u7ed1\u5b9a\u6309\u952e" : key);
+            String label = waiting ? "\u6309\u4e0b\u4efb\u610f\u952e" : (key == null || key.isEmpty() ? "\u7ed1\u5b9a\u6309\u952e" : KeyRouter.label(key));
             this.textCenter(this.clip(label, r[3] - 10), r[1] + r[3] / 2, r[2] + 7, 0xFFFFFFFF);
-            this.hot(pid, r[1], r[2], r[3], r[4], null);
+            this.hot(pid, r[1], r[2] - 1, r[3], 24, null);
         }
         for (int i = 0; i < this.choiceRects.size(); ++i) {
             int[] r = this.choiceRects.get(i);
             int pid = 8000 + r[0];
             boolean hov = this.isHover(pid);
-            this.round(r[1], r[2], r[3], r[4], 4, hov ? this.accentAlpha(0x55) : 0xFF1A222E);
-            this.outline(r[1], r[2], r[3], r[4], hov ? this.accentAlpha(0x88) : 0x22FFFFFF);
-            this.text(d == null ? "" : d.labels[r[0]], r[1], r[2] - 16, SUB);
-            this.textCenter(this.clip(a.param(r[0]), r[3] - 10), r[1] + r[3] / 2, r[2] + 4, TEXT);
-            this.textRight("\u25be", r[1] + r[3] - 2, r[2] + 4, DIM);
-            this.hot(pid, r[1], r[2], r[3], r[4], null);
+            this.round(r[1], r[2] - 1, r[3], 22, 4, hov ? this.accentAlpha(0x55) : 0xFF1A222E);
+            this.outline(r[1], r[2] - 1, r[3], 22, hov ? this.accentAlpha(0x88) : 0x22FFFFFF);
+            this.text(d == null ? "" : d.labels[r[0]], r[1], r[2] - 14, SUB);
+            this.textCenter(this.clip(a.param(r[0]), r[3] - 12), r[1] + r[3] / 2, r[2] + 7, TEXT);
+            this.textRight("\u25be", r[1] + r[3] - 3, r[2] + 6, DIM);
+            this.hot(pid, r[1], r[2] - 1, r[3], 24, null);
         }
         if (this.paramFields.isEmpty() && this.choiceRects.isEmpty()) {
             this.text("\u65e0\u53c2\u6570", x + 10, py + (this.compact() ? 44 : 60), DIM);
@@ -509,8 +506,8 @@ public class GuiProject extends GuiBase {
         }
         if (id == 5100) {
             c.setEnabled(!c.isEnabled());
-            if (!c.isEnabled() && ChainEngine.runningChain() == this.index) {
-                ChainEngine.stop();
+            if (!c.isEnabled() && Engine.get().runningChain() == this.index) {
+                Engine.get().stop();
             }
             this.build();
             return;
@@ -612,10 +609,10 @@ public class GuiProject extends GuiBase {
         }
         if (id == 6105) {
             this.collect();
-            if (ChainEngine.runningChain() == this.index) {
-                ChainEngine.stop();
-            } else if (!ChainEngine.run(this.index)) {
-                PlayerActions.chatSelf(ChainEngine.lastMessage());
+            if (Engine.get().runningChain() == this.index) {
+                Engine.get().stop();
+            } else if (!Engine.get().run(this.index)) {
+                PlayerActions.chatSelf(Engine.get().lastMessage());
             }
         }
     }
@@ -658,14 +655,36 @@ public class GuiProject extends GuiBase {
         }
     }
 
+    /* 正在等待按键时，鼠标左/右/中/侧键也算一种绑定 */
+    @Override
+    protected void mouseClicked(int mx, int my, int button) throws java.io.IOException {
+        if (button >= 0 && (this.awaitKeyParam >= 0 || this.awaitKey)) {
+            String name = KeyRouter.describeMouse(button);
+            ScriptChain pc = this.project();
+            if (this.awaitKeyParam >= 0) {
+                if (pc != null && this.selected >= 0 && this.selected < pc.actions.size()) {
+                    pc.actions.get(this.selected).setParam(this.awaitKeyParam, name);
+                }
+                this.awaitKeyParam = -1;
+            } else {
+                if (pc != null) {
+                    pc.hotkey = name;
+                }
+                this.awaitKey = false;
+            }
+            return;
+        }
+        super.mouseClicked(mx, my, button);
+    }
+
     public void keyTyped(char typedChar, int keyCode) throws java.io.IOException {
         if (this.awaitKeyParam >= 0) {
             int code = keyCode > 1 ? keyCode : org.lwjgl.input.Keyboard.getEventKey();
             if (code > 1) {
                 ScriptChain pc = this.project();
                 if (pc != null && this.selected >= 0 && this.selected < pc.actions.size()) {
-                    String name = org.lwjgl.input.Keyboard.getKeyName(code);
-                    pc.actions.get(this.selected).setParam(this.awaitKeyParam, "NONE".equalsIgnoreCase(name) ? "" : name);
+                    // 保留修饰键：Shift+1 记成 "SHIFT+1"，而不是丢掉 Shift 只记 "1"
+                    pc.actions.get(this.selected).setParam(this.awaitKeyParam, KeyRouter.describe(code));
                 }
                 this.awaitKeyParam = -1;
             } else if (keyCode == 1) {

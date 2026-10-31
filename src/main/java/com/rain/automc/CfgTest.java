@@ -15,13 +15,17 @@ public class CfgTest {
         if (cfg.exists()) {
             cfg.delete();
         }
-        // 造一份 v1 风格配置：trigger 字段 + 3 个动作
+        // 造一份旧配置：trigger 字段 + 已删除的积木 + 旧布局的按键/延迟
         String v1 = "{\"chains\":[{\"name\":\"旧入服\",\"trigger\":\"入服时\",\"loopSec\":10,"
                 + "\"itemName\":\"diamond\",\"itemCount\":64,\"cooldownSec\":3,"
-                + "\"actions\":[{\"type\":\"发送消息\",\"enabled\":true,\"delayMs\":1000,\"p\":[\"/spawn\"]},"
-                + "{\"type\":\"等待\",\"enabled\":true,\"delayMs\":0,\"p\":[\"500\"]}]},"
+                + "\"actions\":[{\"type\":\"发送聊天\",\"enabled\":true,\"p\":[\"/spawn\"]},"
+                + "{\"type\":\"等待\",\"enabled\":true,\"p\":[\"500\"]},"
+                + "{\"type\":\"右键\",\"enabled\":true,\"p\":[]},"
+                + "{\"type\":\"按键\",\"enabled\":true,\"p\":[\"SPACE\",\"300\"]},"
+                + "{\"type\":\"变量设置\",\"enabled\":true,\"p\":[\"a\",\"1\"]}]},"
                 + "{\"name\":\"旧定时\",\"trigger\":\"定时循环\",\"loopSec\":30,"
-                + "\"actions\":[{\"type\":\"发送消息\",\"enabled\":true,\"delayMs\":0,\"p\":[\"hi\"]}]}],"
+                + "\"actions\":[{\"type\":\"发送消息\",\"enabled\":true,\"p\":[\"hi\"]},"
+                + "{\"type\":\"随机延迟\",\"enabled\":true,\"p\":[\"500\",\"1500\"]}]}],"
                 + "\"returnHome\":true}";
         Writer w = new OutputStreamWriter(new FileOutputStream(cfg), StandardCharsets.UTF_8);
         w.write(v1);
@@ -48,6 +52,26 @@ public class CfgTest {
 
         // 目录完整性
         System.out.println("action defs = " + Catalog.count(false) + ", event defs = " + Catalog.count(true));
+        System.out.println("动作 " + Catalog.countCat("动作") + " / 流程 " + Catalog.countCat("流程")
+                + " / 移动 " + Catalog.countCat("移动"));
+        if (Catalog.count(false) != 23 || Catalog.count(true) != 18) {
+            System.out.println("  !! 数量与预期（23 动作 / 18 事件）不一致");
+        }
+        int leftover = 0;
+        for (int i = 0; i < ConfigManager.get().chains.size(); ++i) {
+            ScriptChain c = ConfigManager.get().chains.get(i);
+            for (int k = 0; k < c.actions.size(); ++k) {
+                ScriptAction a = c.actions.get(k);
+                if (a.type.equals("右键") || a.type.equals("左键") || a.type.equals("变量设置")
+                        || a.type.equals("变量运算") || a.type.equals("随机延迟")
+                        || a.type.equals("条件跳转") || a.type.equals("发送聊天")
+                        || a.type.equals("等待") || a.type.equals("复活") || a.type.equals("背包满")) {
+                    ++leftover;
+                    System.out.println("  !! 未迁移: " + a.type);
+                }
+            }
+        }
+        System.out.println("leftover removed types = " + leftover);
         int noDefaults = 0;
         for (int i = 0; i < Catalog.ALL.size(); ++i) {
             Catalog.Def d = Catalog.ALL.get(i);

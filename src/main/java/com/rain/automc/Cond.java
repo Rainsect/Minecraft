@@ -1,6 +1,5 @@
 package com.rain.automc;
 
-import java.util.Map;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.item.ItemStack;
@@ -9,16 +8,16 @@ import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
 /*
- * 条件表达式求值：一行字符串就能写判断，供「条件跳转 / 等待条件 / 事件侦测」共用。
+ * 条件表达式求值：一行字符串就能写判断，供「跳转 / 等待条件」共用。
  * 支持：
  *   血量<10      最大血量      饥饿<=6       经验>=30
- *   y<0          时间>=13000   物品:diamond>=64   变量:count>=3
- *   距离:100,64,200<=5        手持耐久<10
+ *   y<0          时间>=13000   物品:diamond>=64
+ *   距离:100,64,200<=5          手持耐久<10
  * 比较符：> < >= <= = == !=
  */
 @SideOnly(value=Side.CLIENT)
 public class Cond {
-    public static boolean eval(String expr, Map<String, String> vars) {
+    public static boolean eval(String expr) {
         if (expr == null) {
             return false;
         }
@@ -26,10 +25,10 @@ public class Cond {
         if (s.isEmpty()) {
             return false;
         }
-        if (s.equals("\u771f") || s.equals("true")) {
+        if (s.equals("真") || s.equals("true")) {
             return true;
         }
-        if (s.equals("\u5047") || s.equals("false")) {
+        if (s.equals("假") || s.equals("false")) {
             return false;
         }
         String op = null;
@@ -48,8 +47,8 @@ public class Cond {
         }
         String left = s.substring(0, at).trim();
         String right = s.substring(at + op.length()).trim();
-        double lv = value(left, vars);
-        double rv = value(right, vars);
+        double lv = value(left);
+        double rv = value(right);
         if (op.equals(">")) {
             return lv > rv;
         }
@@ -68,20 +67,17 @@ public class Cond {
         return lv == rv;
     }
 
-    private static double value(String token, Map<String, String> vars) {
+    private static double value(String token) {
         String t = token.trim();
         if (t.isEmpty()) {
             return 0.0;
         }
         Minecraft mc = Minecraft.getMinecraft();
         EntityPlayerSP p = mc.player;
-        if (t.startsWith("\u53d8\u91cf:")) {
-            return num(vars.get(t.substring(3).trim()), 0.0);
-        }
-        if (t.startsWith("\u7269\u54c1:")) {
+        if (t.startsWith("物品:")) {
             return p == null ? 0.0 : (double)NpcTrader.countItem(p, t.substring(3).trim());
         }
-        if (t.startsWith("\u8ddd\u79bb:")) {
+        if (t.startsWith("距离:")) {
             if (p == null) {
                 return 0.0;
             }
@@ -96,16 +92,16 @@ public class Cond {
         if (p == null) {
             return 0.0;
         }
-        if (t.equals("\u8840\u91cf")) {
+        if (t.equals("血量")) {
             return p.getHealth();
         }
-        if (t.equals("\u6700\u5927\u8840\u91cf")) {
+        if (t.equals("最大血量")) {
             return p.getMaxHealth();
         }
-        if (t.equals("\u9965\u997f")) {
+        if (t.equals("饥饿")) {
             return p.getFoodStats().getFoodLevel();
         }
-        if (t.equals("\u7ecf\u9a8c")) {
+        if (t.equals("经验")) {
             return p.experienceLevel;
         }
         if (t.equalsIgnoreCase("y")) {
@@ -117,17 +113,17 @@ public class Cond {
         if (t.equalsIgnoreCase("z")) {
             return p.posZ;
         }
-        if (t.equals("\u65f6\u95f4") && mc.world != null) {
+        if (t.equals("时间") && mc.world != null) {
             return mc.world.getWorldTime() % 24000L;
         }
-        if (t.equals("\u624b\u6301\u8010\u4e45")) {
+        if (t.equals("手持耐久")) {
             ItemStack st = p.getHeldItemMainhand();
             if (st == null || st.isEmpty() || st.getMaxDamage() <= 0) {
                 return 0.0;
             }
             return st.getMaxDamage() - st.getItemDamage();
         }
-        if (t.startsWith("\u4f4d\u7f6e\u5757:")) {
+        if (t.startsWith("位置块:")) {
             BlockPos pos = mc.objectMouseOver == null || mc.objectMouseOver.getBlockPos() == null
                     ? BlockPos.ORIGIN : mc.objectMouseOver.getBlockPos();
             return (double)pos.getY();
